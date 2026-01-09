@@ -9,7 +9,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "film_images")
+@Table(name = "movie_images")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -21,8 +21,8 @@ public class MovieImage {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "film_id", nullable = false)
-    private Movie film;
+    @JoinColumn(name = "movie_id", nullable = false)
+    private Movie movie;
 
     @Column(name = "image_path", nullable = false)
     private String imagePath;

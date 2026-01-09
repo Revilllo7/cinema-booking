@@ -3,10 +3,7 @@
 package com.cinema.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
@@ -22,6 +19,8 @@ import java.util.Set;
 @AllArgsConstructor
 @Builder
 @EntityListeners(AuditingEntityListener.class)
+@EqualsAndHashCode(of = {"id", "username", "email"})  // Exclude collections to prevent lazy loading issues
+@ToString(exclude = {"roles", "bookings"})  // Exclude collections from toString to prevent lazy loading
 public class User {
 
     @Id

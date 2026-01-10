@@ -1,0 +1,53 @@
+logging:
+  level:
+    root: INFO
+    com.cinema: DEBUG
+    org.springframework.web: DEBUG
+    org.hibernate: WARN
+
+server:
+  port: 8080
+
+spring:
+  application:
+    name: cinema-booking
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+  thymeleaf:
+    cache: false
+    prefix: classpath:/templates/
+    suffix: .html
+    mode: HTML
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    defer-datasource-initialization: true
+  sql:
+    init:
+      mode: always
+
+app:
+  bootstrap:
+    enabled: true
+
+---
+spring:
+  config:
+    activate:
+      on-profile: dev
+  datasource:
+    url: jdbc:postgresql://localhost:5432/cinemadb
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        format_sql: true
+  h2:
+    console:
+      enabled: false

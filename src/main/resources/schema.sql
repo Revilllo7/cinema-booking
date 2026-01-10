@@ -5,8 +5,8 @@
 DROP TABLE IF EXISTS booking_seats CASCADE;
 DROP TABLE IF EXISTS bookings CASCADE;
 DROP TABLE IF EXISTS screenings CASCADE;
-DROP TABLE IF EXISTS film_images CASCADE;
-DROP TABLE IF EXISTS films CASCADE;
+DROP TABLE IF EXISTS movie_images CASCADE;
+DROP TABLE IF EXISTS movies CASCADE;
 DROP TABLE IF EXISTS seats CASCADE;
 DROP TABLE IF EXISTS halls CASCADE;
 DROP TABLE IF EXISTS ticket_types CASCADE;
@@ -42,7 +42,7 @@ CREATE TABLE user_roles (
     PRIMARY KEY (user_id, role_id)
 );
 
--- Movies table
+-- Movies table (matches Movie entity)
 CREATE TABLE movies (
     id BIGSERIAL PRIMARY KEY,
     title VARCHAR(200) NOT NULL,
@@ -51,7 +51,7 @@ CREATE TABLE movies (
     age_rating VARCHAR(10),
     duration_minutes INTEGER,
     director VARCHAR(150),
-    cast TEXT,
+    movie_cast TEXT,
     release_year INTEGER,
     poster_path VARCHAR(500),
     trailer_url VARCHAR(500),
@@ -94,7 +94,7 @@ CREATE TABLE seats (
 -- Screenings table
 CREATE TABLE screenings (
     id BIGSERIAL PRIMARY KEY,
-    film_id BIGINT NOT NULL REFERENCES films(id) ON DELETE CASCADE,
+    movie_id BIGINT NOT NULL REFERENCES movies(id) ON DELETE CASCADE,
     hall_id BIGINT NOT NULL REFERENCES halls(id) ON DELETE CASCADE,
     start_time TIMESTAMP NOT NULL,
     end_time TIMESTAMP NOT NULL,
@@ -142,10 +142,10 @@ CREATE TABLE booking_seats (
 -- Indexes for performance optimization
 CREATE INDEX idx_users_username ON users(username);
 CREATE INDEX idx_users_email ON users(email);
-CREATE INDEX idx_films_title ON films(title);
-CREATE INDEX idx_films_active ON films(active);
+CREATE INDEX idx_movies_title ON movies(title);
+CREATE INDEX idx_movies_active ON movies(active);
 CREATE INDEX idx_screenings_start_time ON screenings(start_time);
-CREATE INDEX idx_screenings_film_id ON screenings(film_id);
+CREATE INDEX idx_screenings_movie_id ON screenings(movie_id);
 CREATE INDEX idx_screenings_hall_id ON screenings(hall_id);
 CREATE INDEX idx_bookings_user_id ON bookings(user_id);
 CREATE INDEX idx_bookings_screening_id ON bookings(screening_id);

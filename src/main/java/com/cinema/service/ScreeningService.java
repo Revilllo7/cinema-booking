@@ -60,6 +60,15 @@ public class ScreeningService {
     }
 
     @Transactional(readOnly = true)
+    public List<ScreeningDTO> getScreeningsByHall(Long hallId) {
+        log.debug("Fetching screenings for hall id: {}", hallId);
+        return screeningRepository.findByHallIdAndStartTimeAfter(hallId, LocalDateTime.now())
+            .stream()
+            .map(this::convertToDto)
+            .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
     public List<ScreeningDTO> getScreeningsByHallAndDateRange(Long hallId, LocalDateTime startDate, LocalDateTime endDate) {
         log.debug("Fetching screenings for hall id: {}, between {} and {}", hallId, startDate, endDate);
         return screeningRepository.findByHallIdAndStartTimeBetween(hallId, startDate, endDate)

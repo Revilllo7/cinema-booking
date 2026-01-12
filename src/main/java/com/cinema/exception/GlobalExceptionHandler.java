@@ -8,6 +8,9 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.web.servlet.NoHandlerFoundException;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -102,6 +105,51 @@ public class GlobalExceptionHandler {
         );
         
         return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(AuthenticationException.class)
+    public ResponseEntity<ErrorResponse> handleAuthenticationException(
+            AuthenticationException ex, WebRequest request) {
+        log.error("Authentication error: {}", ex.getMessage());
+
+        ErrorResponse errorResponse = new ErrorResponse(
+            LocalDateTime.now(),
+            HttpStatus.UNAUTHORIZED.value(),
+            "Unauthorized",
+            ex.getMessage(),
+            request.getDescription(false).replace("uri=", "")
+        );
+
+        return new ResponseEntity<>(errorResponse, HttpStatus.UNAUTHORIZED);
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ErrorResponse> handleAccessDeniedException(
+            AccessDeniedException ex, WebRequest request) {
+        log.error("Access denied: {}", ex.getMessage());
+
+        ErrorResponse errorResponse = new ErrorResponse(
+            LocalDateTime.now(),
+            HttpStatus.FORBIDDEN.value(),
+            "Forbidden",
+            ex.getMessage(),
+            request.getDescription(false).replace("uri=", "")
+        );
+
+        return new ResponseEntity<>(errorResponse, HttpStatus.FORBIDDEN);
+    }
+    
+    @ExceptionHandler(NoHandlerFoundException.class)
+    public ResponseEntity<ErrorResponse> handleNoHandlerFound(NoHandlerFoundException ex, WebRequest request) {
+        log.error("No handler found: {}", ex.getMessage());
+        ErrorResponse errorResponse = new ErrorResponse(
+            LocalDateTime.now(),
+            HttpStatus.NOT_FOUND.value(),
+            "Not Found",
+            ex.getMessage(),
+            request.getDescription(false).replace("uri=", "")
+        );
+        return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
     }
 
     @ExceptionHandler(Exception.class)

@@ -16,7 +16,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 @Entity
-@Table(name = "films")
+@Table(name = "movies")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

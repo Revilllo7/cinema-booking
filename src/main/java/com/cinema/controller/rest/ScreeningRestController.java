@@ -82,17 +82,43 @@ public class ScreeningRestController {
         return ResponseEntity.ok(screenings);
     }
 
-    @Operation(summary = "Get screenings by hall and date range", description = "Retrieve all screenings for a hall within a date range")
+    @Operation(summary = "Get screenings by hall", description = "Retrieve all upcoming screenings for a hall")
     @GetMapping("/hall/{hallId}")
     public ResponseEntity<List<ScreeningDTO>> getScreeningsByHall(
+            @Parameter(description = "Hall ID") @PathVariable Long hallId) {
+
+        log.info("GET /api/v1/screenings/hall/{}", hallId);
+
+        List<ScreeningDTO> screenings = screeningService.getScreeningsByHall(hallId);
+        return ResponseEntity.ok(screenings);
+    }
+
+    @Operation(summary = "Get screenings by hall and date range", description = "Retrieve all screenings for a hall within a date range")
+    @GetMapping(value = "/hall/{hallId}", params = {"startDate", "endDate"})
+    public ResponseEntity<List<ScreeningDTO>> getScreeningsByHallAndDateRange(
             @Parameter(description = "Hall ID") @PathVariable Long hallId,
-            @Parameter(description = "Start date") 
+            @Parameter(description = "Start date")
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
-            @Parameter(description = "End date") 
+            @Parameter(description = "End date")
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate) {
-        
+
         log.info("GET /api/v1/screenings/hall/{}?startDate={}&endDate={}", hallId, startDate, endDate);
-        
+
+        List<ScreeningDTO> screenings = screeningService.getScreeningsByHallAndDateRange(hallId, startDate, endDate);
+        return ResponseEntity.ok(screenings);
+    }
+
+    @Operation(summary = "Get screenings by hall and date range", description = "Retrieve all screenings for a hall within a date range")
+    @GetMapping(value = "/hall/{hallId}/date-range")
+    public ResponseEntity<List<ScreeningDTO>> getScreeningsByHallAndDateRangePath(
+            @Parameter(description = "Hall ID") @PathVariable Long hallId,
+            @Parameter(description = "Start date")
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
+            @Parameter(description = "End date")
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate) {
+
+        log.info("GET /api/v1/screenings/hall/{}/date-range?startDate={}&endDate={}", hallId, startDate, endDate);
+
         List<ScreeningDTO> screenings = screeningService.getScreeningsByHallAndDateRange(hallId, startDate, endDate);
         return ResponseEntity.ok(screenings);
     }

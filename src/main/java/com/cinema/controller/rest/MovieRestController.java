@@ -42,7 +42,7 @@ public class MovieRestController {
             @Parameter(description = "Sort field") @RequestParam(defaultValue = "createdAt") String sortBy,
             @Parameter(description = "Sort direction") @RequestParam(defaultValue = "DESC") Sort.Direction direction) {
         
-        log.info("GET /api/v1/films - page: {}, size: {}, sortBy: {}", page, size, sortBy);
+        log.info("GET /api/v1/movies - page: {}, size: {}, sortBy: {}", page, size, sortBy);
         
         Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortBy));
         Page<MovieDTO> movies = movieService.getAllActiveMovies(pageable);

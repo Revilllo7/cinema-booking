@@ -137,6 +137,7 @@ public class UserRestController {
         @ApiResponse(responseCode = "404", description = "User not found")
     })
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<UserDTO> updateUser(
             @Parameter(description = "User ID") @PathVariable Long id,
             @Valid @RequestBody UserDTO userDTO) {

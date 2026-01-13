@@ -59,6 +59,9 @@ class BookingServiceTest {
     @Mock
     private TicketTypeRepository ticketTypeRepository;
 
+    @Mock
+    private SeatReservationService seatReservationService;
+
     @InjectMocks
     private BookingService bookingService;
 

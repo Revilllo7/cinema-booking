@@ -1,13 +1,15 @@
 package com.cinema.controller.rest;
 
 import com.cinema.dto.ScreeningDTO;
-import com.cinema.service.ScreeningService.SeatMapResponse;
+import com.cinema.dto.SeatMapResponse;
 import com.cinema.service.ScreeningService;
+import com.cinema.service.SeatReservationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,6 +23,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.security.Principal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -32,6 +35,7 @@ import java.util.List;
 public class ScreeningRestController {
 
     private final ScreeningService screeningService;
+    private final SeatReservationService seatReservationService;
 
     @Operation(summary = "Get all upcoming screenings", description = "Retrieve a paginated list of all upcoming screenings")
     @ApiResponses(value = {
@@ -55,8 +59,12 @@ public class ScreeningRestController {
 
     @Operation(summary = "Get seat map for screening", description = "Retrieve hall layout and occupied seats for a screening")
     @GetMapping("/{id}/seats")
-    public ResponseEntity<SeatMapResponse> getSeatMap(@PathVariable Long id) {
-        SeatMapResponse seatMap = screeningService.getSeatMapForScreening(id);
+    public ResponseEntity<SeatMapResponse> getSeatMap(@PathVariable Long id,
+                                                      HttpServletRequest request,
+                                                      Principal principal) {
+        String sessionId = request.getSession(true).getId();
+        String username = principal != null ? principal.getName() : null;
+        SeatMapResponse seatMap = seatReservationService.getSeatMap(id, sessionId, username);
         return ResponseEntity.ok(seatMap);
     }
 

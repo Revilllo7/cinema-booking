@@ -1,12 +1,10 @@
 package com.cinema.service;
 
 import com.cinema.dto.ScreeningDTO;
-import com.cinema.entity.BookingSeat;
 import com.cinema.entity.Hall;
 import com.cinema.entity.Movie;
 import com.cinema.entity.Screening;
 import com.cinema.exception.ResourceNotFoundException;
-import com.cinema.repository.BookingSeatRepository;
 import com.cinema.repository.HallRepository;
 import com.cinema.repository.MovieRepository;
 import com.cinema.repository.ScreeningRepository;
@@ -29,7 +27,6 @@ public class ScreeningService {
     private final ScreeningRepository screeningRepository;
     private final MovieRepository movieRepository;
     private final HallRepository hallRepository;
-    private final BookingSeatRepository bookingSeatRepository;
 
     @Transactional(readOnly = true)
     public Page<ScreeningDTO> getAllActiveScreenings(Pageable pageable) {
@@ -157,23 +154,6 @@ public class ScreeningService {
         screeningRepository.deleteById(id);
         log.info("Screening deleted successfully: {}", id);
     }
-
-    @Transactional(readOnly = true)
-    public SeatMapResponse getSeatMapForScreening(Long screeningId) {
-        Screening screening = screeningRepository.findById(screeningId)
-            .orElseThrow(() -> new ResourceNotFoundException("Screening", "id", screeningId));
-
-        Hall hall = screening.getHall();
-
-        List<String> occupied = bookingSeatRepository.findActiveSeatsByScreeningId(screeningId).stream()
-            .map(BookingSeat::getSeat)
-            .map(seat -> seat.getRowNumber() + "-" + seat.getSeatNumber())
-            .toList();
-
-        return new SeatMapResponse(hall.getRowsCount(), hall.getSeatsPerRow(), occupied);
-    }
-
-    public record SeatMapResponse(int rows, int cols, List<String> occupied) {}
 
     // Mapping methods
     private ScreeningDTO convertToDto(Screening screening) {

@@ -27,10 +27,35 @@ spring:
   sql:
     init:
       mode: always
+  session:
+    store-type: jdbc
+    jdbc:
+      initialize-schema: always
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
 
 app:
   bootstrap:
     enabled: true
+  messaging:
+    stomp-port: 61613
+    use-broker-relay: false
+  storage:
+    root-dir: uploads
+    movie-images-dir: movies
+    movie-image-max-size: 5242880
+    movie-image-allowed-extensions:
+      - jpg
+      - jpeg
+      - png
+      - webp
+    min-movie-images: 3
+  seating:
+    lock-duration-minutes: 1
+    cleanup-interval-ms: 60000
 
 ---
 spring:

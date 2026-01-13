@@ -80,11 +80,11 @@ public class UserService {
             throw new IllegalArgumentException("Email already exists: " + userDTO.getEmail());
         }
 
+        // Encode password and set enabled before converting to entity
+        userDTO.setPassword(passwordEncoder.encode(userDTO.getPassword()));
+        userDTO.setEnabled(true); // Ensure enabled is set in DTO
+        
         User user = convertToEntity(userDTO);
-        // Encode password
-        user.setPassword(passwordEncoder.encode(userDTO.getPassword()));
-        // Set default enabled status
-        user.setEnabled(true);
 
         // Add default USER role if no roles provided
         if (user.getRoles().isEmpty()) {
@@ -96,7 +96,8 @@ public class UserService {
         }
 
         User savedUser = userRepository.save(user);
-        log.info("User created successfully with id: {}", savedUser.getId());
+        log.info("User created successfully with id: {}, enabled: {}, password length: {}", 
+            savedUser.getId(), savedUser.getEnabled(), savedUser.getPassword() != null ? savedUser.getPassword().length() : 0);
 
         return convertToDto(savedUser);
     }
@@ -171,6 +172,7 @@ public class UserService {
     private User convertToEntity(UserDTO dto) {
         return User.builder()
             .username(dto.getUsername())
+            .password(dto.getPassword()) // Include password in builder
             .email(dto.getEmail())
             .firstName(dto.getFirstName())
             .lastName(dto.getLastName())

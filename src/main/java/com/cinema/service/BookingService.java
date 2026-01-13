@@ -93,6 +93,21 @@ public class BookingService {
     }
 
     @Transactional
+    public BookingDTO createBookingForUser(String username, BookingDTO bookingDTO) {
+        log.info("Creating new booking for user: {}, screening id: {}", 
+            username, bookingDTO.getScreeningId());
+
+        // Get user from username
+        User user = userRepository.findByUsername(username)
+            .orElseThrow(() -> new ResourceNotFoundException("User", "username", username));
+        
+        // Set userId in DTO
+        bookingDTO.setUserId(user.getId());
+        
+        return createBooking(bookingDTO);
+    }
+
+    @Transactional
     public BookingDTO createBooking(BookingDTO bookingDTO) {
         log.info("Creating new booking for user id: {}, screening id: {}", 
             bookingDTO.getUserId(), bookingDTO.getScreeningId());
@@ -110,6 +125,22 @@ public class BookingService {
             throw new IllegalArgumentException("At least one seat must be selected");
         }
 
+        // Validate each seat request early to avoid null pointer issues downstream
+        for (int i = 0; i < bookingDTO.getSeats().size(); i++) {
+            BookingDTO.BookingSeatRequest seatRequest = bookingDTO.getSeats().get(i);
+            if (seatRequest == null) {
+                throw new IllegalArgumentException("Seat entry at index " + i + " is missing");
+            }
+            boolean hasSeatId = seatRequest.getSeatId() != null;
+            boolean hasRowSeat = seatRequest.getRowNumber() != null && seatRequest.getSeatNumber() != null;
+            if (!hasSeatId && !hasRowSeat) {
+                throw new IllegalArgumentException("Seat identification is required for entry " + (i + 1));
+            }
+            if (seatRequest.getTicketTypeId() == null) {
+                throw new IllegalArgumentException("Ticket type is required for entry " + (i + 1));
+            }
+        }
+
         // Create booking
         Booking booking = Booking.builder()
             .user(user)
@@ -122,29 +153,44 @@ public class BookingService {
 
         // Add booking seats
         double totalPrice = 0;
+        Long hallId = screening.getHall().getId();
+
         for (BookingDTO.BookingSeatRequest seatRequest : bookingDTO.getSeats()) {
-            Seat seat = seatRepository.findById(seatRequest.getSeatId())
-                .orElseThrow(() -> new ResourceNotFoundException("Seat", "id", seatRequest.getSeatId()));
+            Seat seat;
+            if (seatRequest.getSeatId() != null) {
+                seat = seatRepository.findById(seatRequest.getSeatId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Seat", "id", seatRequest.getSeatId()));
+            } else if (seatRequest.getRowNumber() != null && seatRequest.getSeatNumber() != null) {
+                seat = seatRepository.findByHallIdAndRowAndSeat(
+                        hallId,
+                        seatRequest.getRowNumber(),
+                        seatRequest.getSeatNumber())
+                    .orElseThrow(() -> new ResourceNotFoundException("Seat", "row/seat", seatRequest.getRowNumber() + "-" + seatRequest.getSeatNumber()));
+            } else {
+                throw new IllegalArgumentException("Seat identification is required (seatId or row/seat)");
+            }
 
             TicketType ticketType = ticketTypeRepository.findById(seatRequest.getTicketTypeId())
                 .orElseThrow(() -> new ResourceNotFoundException("TicketType", "id", seatRequest.getTicketTypeId()));
 
-            // Check if seat is already booked
+            // Check if seat is already selected within this booking payload
             boolean seatAlreadyBooked = booking.getBookingSeats().stream()
-                .anyMatch(bs -> bs.getSeat().getId().equals(seatRequest.getSeatId()));
+                .anyMatch(bs -> bs.getSeat().getId().equals(seat.getId()));
             if (seatAlreadyBooked) {
-                throw new IllegalArgumentException("Seat already selected: " + seatRequest.getSeatId());
+                throw new IllegalArgumentException("Seat already selected: " + seat.getId());
             }
+
+            double seatPrice = ticketType.getPriceModifier();
 
             BookingSeat bookingSeat = BookingSeat.builder()
                 .booking(booking)
                 .seat(seat)
                 .ticketType(ticketType)
-                .price(ticketType.getPriceModifier())
+                .price(seatPrice)
                 .build();
 
             booking.getBookingSeats().add(bookingSeat);
-            totalPrice += ticketType.getPriceModifier();
+            totalPrice += seatPrice;
         }
 
         booking.setTotalPrice(totalPrice);
@@ -171,6 +217,9 @@ public class BookingService {
         booking.setPaymentMethod(paymentMethod);
         booking.setPaymentReference(paymentReference);
 
+        // Mark seats as occupied
+        booking.getBookingSeats().forEach(bs -> bs.setSeatStatus(BookingSeat.SeatStatus.OCCUPIED));
+
         Booking confirmedBooking = bookingRepository.save(booking);
         log.info("Booking confirmed successfully: {}", confirmedBooking.getId());
 
@@ -188,6 +237,7 @@ public class BookingService {
         }
 
         booking.setStatus(Booking.BookingStatus.CANCELLED);
+        booking.getBookingSeats().forEach(bs -> bs.setSeatStatus(BookingSeat.SeatStatus.AVAILABLE));
         Booking cancelledBooking = bookingRepository.save(booking);
         log.info("Booking cancelled successfully: {}", cancelledBooking.getId());
 
@@ -212,10 +262,14 @@ public class BookingService {
             .userId(booking.getUser().getId())
             .screeningId(booking.getScreening().getId())
             .seats(booking.getBookingSeats().stream()
-                .map(bs -> new BookingDTO.BookingSeatRequest(
-                    bs.getSeat().getId(),
-                    bs.getTicketType().getId()
-                ))
+                .map(bs -> {
+                    BookingDTO.BookingSeatRequest seatDto = new BookingDTO.BookingSeatRequest();
+                    seatDto.setSeatId(bs.getSeat().getId());
+                    seatDto.setRowNumber(bs.getSeat().getRowNumber());
+                    seatDto.setSeatNumber(bs.getSeat().getSeatNumber());
+                    seatDto.setTicketTypeId(bs.getTicketType().getId());
+                    return seatDto;
+                })
                 .collect(Collectors.toList()))
             .totalPrice(booking.getTotalPrice())
             .status(booking.getStatus().toString())

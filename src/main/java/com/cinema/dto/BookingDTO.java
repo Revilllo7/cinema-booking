@@ -20,7 +20,7 @@ public class BookingDTO {
     
     private String bookingNumber;
     
-    @NotNull(message = "User ID is required")
+    // userId is optional in request - will be set from authentication
     private Long userId;
     
     @NotNull(message = "Screening ID is required")
@@ -50,11 +50,20 @@ public class BookingDTO {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class BookingSeatRequest {
-        
-        @NotNull(message = "Seat ID is required")
+        // Either seatId or (rowNumber + seatNumber) must be provided
         private Long seatId;
+
+        private Integer rowNumber;
+
+        private Integer seatNumber;
         
         @NotNull(message = "Ticket type ID is required")
         private Long ticketTypeId;
+
+        // Legacy convenience constructor for existing tests/fixtures
+        public BookingSeatRequest(Long seatId, Long ticketTypeId) {
+            this.seatId = seatId;
+            this.ticketTypeId = ticketTypeId;
+        }
     }
 }

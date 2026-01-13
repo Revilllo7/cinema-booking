@@ -1,6 +1,7 @@
 package com.cinema.controller.rest;
 
 import com.cinema.dto.ScreeningDTO;
+import com.cinema.service.ScreeningService.SeatMapResponse;
 import com.cinema.service.ScreeningService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -50,6 +51,13 @@ public class ScreeningRestController {
         Page<ScreeningDTO> screenings = screeningService.getAllActiveScreenings(pageable);
         
         return ResponseEntity.ok(screenings);
+    }
+
+    @Operation(summary = "Get seat map for screening", description = "Retrieve hall layout and occupied seats for a screening")
+    @GetMapping("/{id}/seats")
+    public ResponseEntity<SeatMapResponse> getSeatMap(@PathVariable Long id) {
+        SeatMapResponse seatMap = screeningService.getSeatMapForScreening(id);
+        return ResponseEntity.ok(seatMap);
     }
 
     @Operation(summary = "Get screening by ID", description = "Retrieve a single screening by its ID")

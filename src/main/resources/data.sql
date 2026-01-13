@@ -1,8 +1,8 @@
 -- Cinema Booking System - Seed Data
 -- Passwords are BCrypt-encoded for security
--- admin123 -> $2a$10$8.UnVuG9HHgffUDAlk8qfOuVGkqRzgVymGe07xd00DMxs.AQubh4a
--- user123 -> $2a$10$GRLdNijSQMUvl/au9ofL.eDwmoohzzS7.rmNSJZ.0FxO/BTk76klW
--- employee123 -> $2a$10$UfCJqmPqQlEBbak42/y1Oe5t1JXy7KLKnjmHqKHGkz7gUAqPTYPYe
+-- admin123 -> $2a$10$QQob1rq6XxACbIUjjcrDXeDElhTnXhpXZ3A1ItmlrH5p1.yJViblS
+-- user123 -> $2a$10$/5a3.4tb3xfPs5/5qCjQ0uO.JRQgY7xaltdEvfCs0FOQ0C/ppbjzS
+-- employee123 -> $2a$10$phKHgjSlMpqfzqf9d8Bw3e/A8wHFhKg5pW69M7upQv4XkaE73IJem
 
 INSERT INTO roles (name, description) VALUES
 ('ROLE_ADMIN', 'Administrator with full system access'),
@@ -11,9 +11,9 @@ INSERT INTO roles (name, description) VALUES
 ON CONFLICT (name) DO UPDATE SET description = EXCLUDED.description;
 
 INSERT INTO users (username, email, password, first_name, last_name, phone_number, enabled, created_at, updated_at) VALUES
-('admin', 'admin@cinema.com', '$2a$10$8.UnVuG9HHgffUDAlk8qfOuVGkqRzgVymGe07xd00DMxs.AQubh4a', 'Admin', 'Admin', '111-111-1111', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-('employee', 'employee@cinema.com', '$2a$10$UfCJqmPqQlEBbak42/y1Oe5t1JXy7KLKnjmHqKHGkz7gUAqPTYPYe', 'Employee', 'Staff', '222-222-2222', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-('user', 'user@cinema.com', '$2a$10$GRLdNijSQMUvl/au9ofL.eDwmoohzzS7.rmNSJZ.0FxO/BTk76klW', 'John', 'Doe', '333-333-3333', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+('admin', 'admin@cinema.com', '$2a$10$QQob1rq6XxACbIUjjcrDXeDElhTnXhpXZ3A1ItmlrH5p1.yJViblS', 'Admin', 'Admin', '111-111-1111', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+('employee', 'employee@cinema.com', '$2a$10$phKHgjSlMpqfzqf9d8Bw3e/A8wHFhKg5pW69M7upQv4XkaE73IJem', 'Employee', 'Staff', '222-222-2222', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+('user', 'user@cinema.com', '$2a$10$/5a3.4tb3xfPs5/5qCjQ0uO.JRQgY7xaltdEvfCs0FOQ0C/ppbjzS', 'John', 'Doe', '333-333-3333', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 ON CONFLICT (username) DO UPDATE SET
     email = EXCLUDED.email,
     password = EXCLUDED.password,
@@ -45,10 +45,10 @@ CROSS JOIN LATERAL generate_series(1, h.seats_per_row) AS s(seat_num)
 ON CONFLICT (hall_id, row_number, seat_number) DO NOTHING;
 
 INSERT INTO ticket_types (name, description, price_modifier, active) VALUES
-('Standard', 'Regular ticket', 1.0, true),
-('Student', 'Student discount ticket', 0.75, true),
-('Senior', 'Senior citizen discount ticket', 0.75, true),
-('Child', 'Children under 12', 0.6, true)
+('Standard', 'Regular ticket', 30.0, true),
+('Student', 'Student discount ticket', 22.0, true),
+('Senior', 'Senior citizen discount ticket', 22.0, true),
+('Child', 'Children under 12', 20.0, true)
 ON CONFLICT (name) DO UPDATE SET
     description = EXCLUDED.description,
     price_modifier = EXCLUDED.price_modifier,

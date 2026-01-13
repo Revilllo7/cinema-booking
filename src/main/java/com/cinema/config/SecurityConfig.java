@@ -28,8 +28,8 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
             .authorizeHttpRequests(auth -> auth
-                // Public endpoints - Static resources
-                .requestMatchers("/", "/home", "/about", "/contact", "/css/**", "/js/**", "/images/**").permitAll()
+                // Public endpoints - Static resources and authentication pages
+                .requestMatchers("/", "/home", "/about", "/contact", "/css/**", "/js/**", "/images/**", "/login", "/register").permitAll()
                 // Public booking lookups (id and number)
                 .requestMatchers(HttpMethod.GET, "/api/v1/bookings/*").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/bookings/number/**").permitAll()
@@ -70,7 +70,7 @@ public class SecurityConfig {
             .formLogin(form -> form
                 .loginPage("/login")
                 .loginProcessingUrl("/perform_login")
-                .defaultSuccessUrl("/home", true)
+                .defaultSuccessUrl("/", true)
                 .failureUrl("/login?error=true")
                 .permitAll()
             )

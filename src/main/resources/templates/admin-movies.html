@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments/head :: head}"></head>
+<body>
+    <div th:replace="~{fragments/navbar :: navbar}"></div>
+    
+    <main class="container my-5">
+        <!-- Page Header -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2><i class="bi bi-film"></i> Manage Movies</h2>
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a href="/admin" th:href="@{/admin}">Admin Dashboard</a></li>
+                        <li class="breadcrumb-item active">Movies</li>
+                    </ol>
+                </nav>
+            </div>
+            <button class="btn btn-cinema" data-bs-toggle="modal" data-bs-target="#addMovieModal">
+                <i class="bi bi-plus-circle"></i> Add New Movie
+            </button>
+        </div>
+
+        <!-- Search and Filter -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <input type="text" id="searchInput" class="form-control" placeholder="Search movies by title...">
+                    </div>
+                    <div class="col-md-3">
+                        <select id="genreFilter" class="form-select">
+                            <option value="">All Genres</option>
+                            <option value="Action">Action</option>
+                            <option value="Comedy">Comedy</option>
+                            <option value="Drama">Drama</option>
+                            <option value="Horror">Horror</option>
+                            <option value="Sci-Fi">Sci-Fi</option>
+                            <option value="Romance">Romance</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <button class="btn btn-outline-secondary w-100" onclick="loadMovies()">
+                            <i class="bi bi-arrow-clockwise"></i> Refresh
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Movies Table -->
+        <div class="card">
+            <div class="card-header bg-cinema-primary text-white">
+                <h5 class="mb-0"><i class="bi bi-list-ul"></i> Movies Database</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover admin-table mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>ID</th>
+                                <th>Poster</th>
+                                <th>Title</th>
+                                <th>Genre</th>
+                                <th>Duration</th>
+                                <th>Age Rating</th>
+                                <th>Director</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="moviesTableBody">
+                            <tr>
+                                <td colspan="8" class="text-center py-4">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="card-footer">
+                <nav id="paginationNav">
+                    <!-- Pagination will be inserted here -->
+                </nav>
+            </div>
+        </div>
+    </main>
+
+    <!-- Add Movie Modal -->
+    <div class="modal fade" id="addMovieModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-cinema-primary text-white">
+                    <h5 class="modal-title"><i class="bi bi-plus-circle"></i> Add New Movie</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addMovieForm">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Title *</label>
+                                <input type="text" class="form-control" id="addTitle" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Genre *</label>
+                                <select class="form-select" id="addGenre" required>
+                                    <option value="">Select Genre</option>
+                                    <option value="Action">Action</option>
+                                    <option value="Comedy">Comedy</option>
+                                    <option value="Drama">Drama</option>
+                                    <option value="Horror">Horror</option>
+                                    <option value="Sci-Fi">Sci-Fi</option>
+                                    <option value="Romance">Romance</option>
+                                    <option value="Thriller">Thriller</option>
+                                    <option value="Animation">Animation</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Duration (minutes) *</label>
+                                <input type="number" class="form-control" id="addDuration" required min="1">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Age Rating *</label>
+                                <select class="form-select" id="addAgeRating" required>
+                                    <option value="">Select Rating</option>
+                                    <option value="G">G</option>
+                                    <option value="PG">PG</option>
+                                    <option value="PG-13">PG-13</option>
+                                    <option value="R">R</option>
+                                    <option value="NC-17">NC-17</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Director *</label>
+                                <input type="text" class="form-control" id="addDirector" required>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Cast</label>
+                            <input type="text" class="form-control" id="addCast" placeholder="Comma-separated actor names">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Description *</label>
+                            <textarea class="form-control" id="addDescription" rows="3" required></textarea>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Poster URL</label>
+                                <input type="url" class="form-control" id="addPosterPath" placeholder="https://...">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Trailer URL</label>
+                                <input type="url" class="form-control" id="addTrailerUrl" placeholder="https://youtube.com/...">
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-cinema" onclick="addMovie()">
+                        <i class="bi bi-save"></i> Save Movie
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Movie Modal -->
+    <div class="modal fade" id="editMovieModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-cinema-primary text-white">
+                    <h5 class="modal-title"><i class="bi bi-pencil"></i> Edit Movie</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editMovieForm">
+                        <input type="hidden" id="editId">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Title *</label>
+                                <input type="text" class="form-control" id="editTitle" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Genre *</label>
+                                <select class="form-select" id="editGenre" required>
+                                    <option value="Action">Action</option>
+                                    <option value="Comedy">Comedy</option>
+                                    <option value="Drama">Drama</option>
+                                    <option value="Horror">Horror</option>
+                                    <option value="Sci-Fi">Sci-Fi</option>
+                                    <option value="Romance">Romance</option>
+                                    <option value="Thriller">Thriller</option>
+                                    <option value="Animation">Animation</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Duration (minutes) *</label>
+                                <input type="number" class="form-control" id="editDuration" required min="1">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Age Rating *</label>
+                                <select class="form-select" id="editAgeRating" required>
+                                    <option value="G">G</option>
+                                    <option value="PG">PG</option>
+                                    <option value="PG-13">PG-13</option>
+                                    <option value="R">R</option>
+                                    <option value="NC-17">NC-17</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Director *</label>
+                                <input type="text" class="form-control" id="editDirector" required>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Cast</label>
+                            <input type="text" class="form-control" id="editCast">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Description *</label>
+                            <textarea class="form-control" id="editDescription" rows="3" required></textarea>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Poster URL</label>
+                                <input type="url" class="form-control" id="editPosterPath">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Trailer URL</label>
+                                <input type="url" class="form-control" id="editTrailerUrl">
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-cinema" onclick="updateMovie()">
+                        <i class="bi bi-save"></i> Update Movie
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div th:replace="~{fragments/footer :: footer}"></div>
+
+    <script>
+        let currentPage = 0;
+        const pageSize = 10;
+
+        function loadMovies(page = 0) {
+            currentPage = page;
+            const search = document.getElementById('searchInput').value;
+            const genre = document.getElementById('genreFilter').value;
+            
+            let url = `/api/v1/movies?page=${page}&size=${pageSize}&sort=id,desc`;
+            if (search) url += `&search=${encodeURIComponent(search)}`;
+            if (genre) url += `&genre=${encodeURIComponent(genre)}`;
+
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    renderMoviesTable(data.content);
+                    renderPagination(data);
+                })
+                .catch(error => {
+                    console.error('Error loading movies:', error);
+                    document.getElementById('moviesTableBody').innerHTML = 
+                        '<tr><td colspan="8" class="text-center text-danger py-4">Failed to load movies</td></tr>';
+                });
+        }
+
+        function renderMoviesTable(movies) {
+            const tbody = document.getElementById('moviesTableBody');
+            if (movies.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4">No movies found</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = movies.map(movie => `
+                <tr>
+                    <td>${movie.id}</td>
+                    <td>
+                        <img src="${movie.posterPath || '/images/default-poster.jpg'}" 
+                             alt="${movie.title}" 
+                             class="img-thumbnail" 
+                             style="width: 50px; height: 75px; object-fit: cover;">
+                    </td>
+                    <td><strong>${movie.title}</strong></td>
+                    <td><span class="badge bg-secondary">${movie.genre}</span></td>
+                    <td>${movie.durationMinutes} min</td>
+                    <td><span class="badge bg-info">${movie.ageRating}</span></td>
+                    <td>${movie.director}</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-primary" onclick="editMovie(${movie.id})">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteMovie(${movie.id}, '${movie.title}')">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function renderPagination(data) {
+            const nav = document.getElementById('paginationNav');
+            if (data.totalPages <= 1) {
+                nav.innerHTML = '';
+                return;
+            }
+
+            let html = '<ul class="pagination pagination-sm mb-0 justify-content-center">';
+            
+            // Previous button
+            html += `<li class="page-item ${data.first ? 'disabled' : ''}">
+                <a class="page-link" href="#" onclick="loadMovies(${currentPage - 1}); return false;">Previous</a>
+            </li>`;
+
+            // Page numbers
+            for (let i = 0; i < data.totalPages; i++) {
+                if (i === 0 || i === data.totalPages - 1 || Math.abs(i - currentPage) <= 2) {
+                    html += `<li class="page-item ${i === currentPage ? 'active' : ''}">
+                        <a class="page-link" href="#" onclick="loadMovies(${i}); return false;">${i + 1}</a>
+                    </li>`;
+                } else if (Math.abs(i - currentPage) === 3) {
+                    html += '<li class="page-item disabled"><span class="page-link">...</span></li>';
+                }
+            }
+
+            // Next button
+            html += `<li class="page-item ${data.last ? 'disabled' : ''}">
+                <a class="page-link" href="#" onclick="loadMovies(${currentPage + 1}); return false;">Next</a>
+            </li>`;
+            
+            html += '</ul>';
+            nav.innerHTML = html;
+        }
+
+        function addMovie() {
+            const movieData = {
+                title: document.getElementById('addTitle').value,
+                genre: document.getElementById('addGenre').value,
+                durationMinutes: parseInt(document.getElementById('addDuration').value),
+                ageRating: document.getElementById('addAgeRating').value,
+                director: document.getElementById('addDirector').value,
+                cast: document.getElementById('addCast').value,
+                description: document.getElementById('addDescription').value,
+                posterPath: document.getElementById('addPosterPath').value,
+                trailerUrl: document.getElementById('addTrailerUrl').value
+            };
+
+            fetch('/api/v1/movies', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(movieData)
+            })
+            .then(response => {
+                if (response.ok) {
+                    bootstrap.Modal.getInstance(document.getElementById('addMovieModal')).hide();
+                    document.getElementById('addMovieForm').reset();
+                    loadMovies(currentPage);
+                    alert('Movie added successfully!');
+                } else {
+                    throw new Error('Failed to add movie');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to add movie. Please try again.');
+            });
+        }
+
+        function editMovie(id) {
+            fetch(`/api/v1/movies/${id}`)
+                .then(response => response.json())
+                .then(movie => {
+                    document.getElementById('editId').value = movie.id;
+                    document.getElementById('editTitle').value = movie.title;
+                    document.getElementById('editGenre').value = movie.genre;
+                    document.getElementById('editDuration').value = movie.durationMinutes;
+                    document.getElementById('editAgeRating').value = movie.ageRating;
+                    document.getElementById('editDirector').value = movie.director;
+                    document.getElementById('editCast').value = movie.cast || '';
+                    document.getElementById('editDescription').value = movie.description;
+                    document.getElementById('editPosterPath').value = movie.posterPath || '';
+                    document.getElementById('editTrailerUrl').value = movie.trailerUrl || '';
+                    
+                    new bootstrap.Modal(document.getElementById('editMovieModal')).show();
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Failed to load movie details');
+                });
+        }
+
+        function updateMovie() {
+            const id = document.getElementById('editId').value;
+            const movieData = {
+                title: document.getElementById('editTitle').value,
+                genre: document.getElementById('editGenre').value,
+                durationMinutes: parseInt(document.getElementById('editDuration').value),
+                ageRating: document.getElementById('editAgeRating').value,
+                director: document.getElementById('editDirector').value,
+                cast: document.getElementById('editCast').value,
+                description: document.getElementById('editDescription').value,
+                posterPath: document.getElementById('editPosterPath').value,
+                trailerUrl: document.getElementById('editTrailerUrl').value
+            };
+
+            fetch(`/api/v1/movies/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(movieData)
+            })
+            .then(response => {
+                if (response.ok) {
+                    bootstrap.Modal.getInstance(document.getElementById('editMovieModal')).hide();
+                    loadMovies(currentPage);
+                    alert('Movie updated successfully!');
+                } else {
+                    throw new Error('Failed to update movie');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to update movie. Please try again.');
+            });
+        }
+
+        function deleteMovie(id, title) {
+            if (!confirm(`Are you sure you want to delete "${title}"?`)) return;
+
+            fetch(`/api/v1/movies/${id}`, { method: 'DELETE' })
+                .then(response => {
+                    if (response.ok) {
+                        loadMovies(currentPage);
+                        alert('Movie deleted successfully!');
+                    } else {
+                        throw new Error('Failed to delete movie');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Failed to delete movie. It may be associated with screenings.');
+                });
+        }
+
+        // Search functionality
+        document.getElementById('searchInput').addEventListener('keyup', function(e) {
+            if (e.key === 'Enter') loadMovies(0);
+        });
+
+        document.getElementById('genreFilter').addEventListener('change', () => loadMovies(0));
+
+        // Load movies on page load
+        document.addEventListener('DOMContentLoaded', () => loadMovies());
+    </script>
+</body>
+</html>

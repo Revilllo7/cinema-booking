@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments/head :: head}"></head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+<main class="container my-5">
+    <!-- Page Header -->
+    <div class="mb-4">
+        <h2><i class="bi bi-graph-up"></i> Sales Statistics</h2>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="/admin" th:href="@{/admin}">Admin Dashboard</a></li>
+                <li class="breadcrumb-item active">Statistics</li>
+            </ol>
+        </nav>
+    </div>
+
+    <!-- Month Selector -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label">Month</label>
+                    <select id="monthSelect" class="form-select">
+                        <option value="1">January</option>
+                        <option value="2">February</option>
+                        <option value="3">March</option>
+                        <option value="4">April</option>
+                        <option value="5">May</option>
+                        <option value="6">June</option>
+                        <option value="7">July</option>
+                        <option value="8">August</option>
+                        <option value="9">September</option>
+                        <option value="10">October</option>
+                        <option value="11">November</option>
+                        <option value="12">December</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Year</label>
+                    <input type="number" id="yearInput" class="form-control" min="2020" max="2030">
+                </div>
+                <div class="col-md-3">
+                    <button class="btn btn-cinema w-100" onclick="loadStats()">
+                        <i class="bi bi-search"></i> Load Statistics
+                    </button>
+                </div>
+                <div class="col-md-3">
+                    <button class="btn btn-outline-secondary w-100" onclick="loadCurrentMonth()">
+                        <i class="bi bi-calendar-today"></i> Current Month
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8 mb-4">
+            <div class="card">
+                <div class="card-header bg-cinema-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-bar-chart-line"></i> Daily Revenue</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="revenueChart" height="100"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4 mb-4">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="bi bi-info-circle"></i> Summary</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <h6 class="text-muted">Total Revenue</h6>
+                        <h3 class="text-cinema-primary" id="totalRevenue">$0.00</h3>
+                    </div>
+                    <div class="mb-3">
+                        <h6 class="text-muted">Total Tickets</h6>
+                        <h3 class="text-cinema-primary" id="totalTickets">0</h3>
+                    </div>
+                    <div>
+                        <h6 class="text-muted">Average per Day</h6>
+                        <h3 class="text-cinema-primary" id="avgRevenue">$0.00</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="bi bi-table"></i> Daily Breakdown</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover admin-table mb-0" id="ticketsTable">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Tickets Sold</th>
+                                    <th>Revenue</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+<div th:replace="~{fragments/footer :: footer}"></div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+    let revenueChart;
+
+    async function loadStats() {
+        try {
+            const month = document.getElementById('monthSelect').value;
+            const year = document.getElementById('yearInput').value;
+            const res = await fetch(`/api/v1/admin/stats/sales?year=${year}&month=${month}`);
+            
+            if (!res.ok) {
+                throw new Error('Failed to fetch statistics');
+            }
+            
+            const data = await res.json();
+            renderData(data);
+        } catch (e) {
+            console.error('Error loading stats:', e);
+            alert('Failed to load statistics. Using demo data.');
+            // Fallback demo data
+            const today = new Date();
+            const fmt = d => d.toISOString().slice(0,10);
+            const demoData = Array.from({length:7}, (_,i)=>{
+                const d = new Date(today); d.setDate(d.getDate()-i);
+                return { 
+                    date: fmt(d), 
+                    ticketsSold: Math.floor(Math.random()*50)+10, 
+                    totalRevenue: Math.floor(Math.random()*2000)+500 
+                };
+            }).reverse();
+            renderData(demoData);
+        }
+    }
+
+    async function loadCurrentMonth() {
+        try {
+            const res = await fetch('/api/v1/admin/stats/sales/current-month');
+            
+            if (!res.ok) {
+                throw new Error('Failed to fetch current month statistics');
+            }
+            
+            const data = await res.json();
+            
+            // Update month and year selects
+            const now = new Date();
+            document.getElementById('monthSelect').value = (now.getMonth() + 1).toString();
+            document.getElementById('yearInput').value = now.getFullYear();
+            
+            renderData(data);
+        } catch (e) {
+            console.error('Error loading current month stats:', e);
+            loadStats();
+        }
+    }
+
+    function renderData(rows) {
+        renderTable(rows);
+        renderChart(rows);
+        renderSummary(rows);
+    }
+
+    function renderTable(rows) {
+        const tbody = document.querySelector('#ticketsTable tbody');
+        if (rows.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="3" class="text-center py-4 text-muted">No data available for this period</td></tr>';
+            return;
+        }
+        tbody.innerHTML = rows.map(r => {
+            const revenue = r.totalRevenue || r.revenue || 0;
+            const tickets = r.ticketsSold || r.tickets || 0;
+            return `<tr>
+                <td><strong>${r.date}</strong></td>
+                <td><span class="badge bg-info">${tickets}</span></td>
+                <td><strong class="text-cinema-primary">$${parseFloat(revenue).toFixed(2)}</strong></td>
+            </tr>`;
+        }).join('');
+    }
+
+    function renderChart(rows) {
+        const ctx = document.getElementById('revenueChart');
+        
+        // Destroy existing chart if it exists
+        if (revenueChart) {
+            revenueChart.destroy();
+        }
+
+        if (rows.length === 0) {
+            ctx.getContext('2d').clearRect(0, 0, ctx.width, ctx.height);
+            return;
+        }
+
+        revenueChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: rows.map(r=>r.date),
+                datasets: [{ 
+                    label: 'Revenue ($)', 
+                    data: rows.map(r=> r.totalRevenue || r.revenue || 0), 
+                    borderColor: '#e50914', 
+                    backgroundColor: 'rgba(229,9,20,0.2)',
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: { 
+                responsive: true, 
+                maintainAspectRatio: true,
+                scales: { 
+                    y: { 
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return '$' + value.toFixed(0);
+                            }
+                        }
+                    } 
+                },
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return 'Revenue: $' + context.parsed.y.toFixed(2);
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    function renderSummary(rows) {
+        if (rows.length === 0) {
+            document.getElementById('totalRevenue').textContent = '$0.00';
+            document.getElementById('totalTickets').textContent = '0';
+            document.getElementById('avgRevenue').textContent = '$0.00';
+            return;
+        }
+
+        const totalRevenue = rows.reduce((sum, r) => sum + (r.totalRevenue || r.revenue || 0), 0);
+        const totalTickets = rows.reduce((sum, r) => sum + (r.ticketsSold || r.tickets || 0), 0);
+        const avgRevenue = totalRevenue / rows.length;
+
+        document.getElementById('totalRevenue').textContent = '$' + totalRevenue.toFixed(2);
+        document.getElementById('totalTickets').textContent = totalTickets;
+        document.getElementById('avgRevenue').textContent = '$' + avgRevenue.toFixed(2);
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        // Set current month and year
+        const now = new Date();
+        document.getElementById('monthSelect').value = (now.getMonth() + 1).toString();
+        document.getElementById('yearInput').value = now.getFullYear();
+        
+        // Load current month data
+        await loadCurrentMonth();
+    });
+</script>
+</body>
+</html>

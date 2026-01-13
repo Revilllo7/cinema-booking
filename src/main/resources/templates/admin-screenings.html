@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments/head :: head}"></head>
+<body>
+    <div th:replace="~{fragments/navbar :: navbar}"></div>
+    
+    <main class="container my-5">
+        <!-- Page Header -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2><i class="bi bi-camera-reels"></i> Manage Screenings</h2>
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a href="/admin" th:href="@{/admin}">Admin Dashboard</a></li>
+                        <li class="breadcrumb-item active">Screenings</li>
+                    </ol>
+                </nav>
+            </div>
+            <button class="btn btn-cinema" data-bs-toggle="modal" data-bs-target="#addScreeningModal">
+                <i class="bi bi-plus-circle"></i> Schedule New Screening
+            </button>
+        </div>
+
+        <!-- Filters -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <label class="form-label">Movie</label>
+                        <select id="movieFilter" class="form-select">
+                            <option value="">All Movies</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">From Date</label>
+                        <input type="date" id="dateFromFilter" class="form-control">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">To Date</label>
+                        <input type="date" id="dateToFilter" class="form-control">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">&nbsp;</label>
+                        <button class="btn btn-outline-secondary w-100" onclick="loadScreenings()">
+                            <i class="bi bi-search"></i> Filter
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Screenings Table -->
+        <div class="card">
+            <div class="card-header bg-cinema-primary text-white">
+                <h5 class="mb-0"><i class="bi bi-list-ul"></i> Scheduled Screenings</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover admin-table mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>ID</th>
+                                <th>Movie</th>
+                                <th>Hall</th>
+                                <th>Start Time</th>
+                                <th>End Time</th>
+                                <th>Price</th>
+                                <th>Available Seats</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="screeningsTableBody">
+                            <tr>
+                                <td colspan="9" class="text-center py-4">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="card-footer">
+                <nav id="paginationNav">
+                    <!-- Pagination will be inserted here -->
+                </nav>
+            </div>
+        </div>
+    </main>
+
+    <!-- Add Screening Modal -->
+    <div class="modal fade" id="addScreeningModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-cinema-primary text-white">
+                    <h5 class="modal-title"><i class="bi bi-plus-circle"></i> Schedule New Screening</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addScreeningForm">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Movie *</label>
+                                <select class="form-select" id="addMovieId" required>
+                                    <option value="">Select Movie</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Hall *</label>
+                                <select class="form-select" id="addHallId" required>
+                                    <option value="">Select Hall</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Start Date & Time *</label>
+                                <input type="datetime-local" class="form-control" id="addStartTime" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Base Price *</label>
+                                <input type="number" class="form-control" id="addBasePrice" required min="0.01" step="0.01">
+                            </div>
+                        </div>
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle"></i> End time will be calculated automatically based on movie duration.
+                            The system will validate for time conflicts with other screenings in the same hall.
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-cinema" onclick="addScreening()">
+                        <i class="bi bi-save"></i> Schedule Screening
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Screening Modal -->
+    <div class="modal fade" id="editScreeningModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-cinema-primary text-white">
+                    <h5 class="modal-title"><i class="bi bi-pencil"></i> Edit Screening</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editScreeningForm">
+                        <input type="hidden" id="editId">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Movie *</label>
+                                <select class="form-select" id="editMovieId" required>
+                                    <option value="">Select Movie</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Hall *</label>
+                                <select class="form-select" id="editHallId" required>
+                                    <option value="">Select Hall</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Start Date & Time *</label>
+                                <input type="datetime-local" class="form-control" id="editStartTime" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Base Price *</label>
+                                <input type="number" class="form-control" id="editBasePrice" required min="0.01" step="0.01">
+                            </div>
+                        </div>
+                        <div class="alert alert-warning">
+                            <i class="bi bi-exclamation-triangle"></i> Changing screening time may affect existing bookings.
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-cinema" onclick="updateScreening()">
+                        <i class="bi bi-save"></i> Update Screening
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div th:replace="~{fragments/footer :: footer}"></div>
+
+    <script>
+        let currentPage = 0;
+        const pageSize = 15;
+        let movies = [];
+        let halls = [];
+
+        function loadDropdownData() {
+            // Load movies
+            fetch('/api/v1/movies?page=0&size=1000')
+                .then(response => response.json())
+                .then(data => {
+                    movies = data.content;
+                    populateMovieDropdowns();
+                })
+                .catch(error => console.error('Error loading movies:', error));
+
+            // Load halls
+            fetch('/api/v1/halls?page=0&size=100')
+                .then(response => response.json())
+                .then(data => {
+                    halls = data.content;
+                    populateHallDropdowns();
+                })
+                .catch(error => console.error('Error loading halls:', error));
+        }
+
+        function populateMovieDropdowns() {
+            const addSelect = document.getElementById('addMovieId');
+            const editSelect = document.getElementById('editMovieId');
+            const filterSelect = document.getElementById('movieFilter');
+            
+            const options = movies.map(m => `<option value="${m.id}">${m.title} (${m.genre})</option>`).join('');
+            addSelect.innerHTML += options;
+            editSelect.innerHTML += options;
+            filterSelect.innerHTML += options;
+        }
+
+        function populateHallDropdowns() {
+            const addSelect = document.getElementById('addHallId');
+            const editSelect = document.getElementById('editHallId');
+            
+            const options = halls.map(h => `<option value="${h.id}">${h.name} (${h.capacity} seats)</option>`).join('');
+            addSelect.innerHTML += options;
+            editSelect.innerHTML += options;
+        }
+
+        function loadScreenings(page = 0) {
+            currentPage = page;
+            const movieId = document.getElementById('movieFilter').value;
+            const dateFrom = document.getElementById('dateFromFilter').value;
+            const dateTo = document.getElementById('dateToFilter').value;
+            
+            let url = `/api/v1/screenings?page=${page}&size=${pageSize}&sort=startTime,desc`;
+            if (movieId) url += `&movieId=${movieId}`;
+            if (dateFrom) url += `&startDate=${dateFrom}T00:00:00`;
+            if (dateTo) url += `&endDate=${dateTo}T23:59:59`;
+
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    renderScreeningsTable(data.content);
+                    renderPagination(data);
+                })
+                .catch(error => {
+                    console.error('Error loading screenings:', error);
+                    document.getElementById('screeningsTableBody').innerHTML = 
+                        '<tr><td colspan="9" class="text-center text-danger py-4">Failed to load screenings</td></tr>';
+                });
+        }
+
+        function renderScreeningsTable(screenings) {
+            const tbody = document.getElementById('screeningsTableBody');
+            if (screenings.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="9" class="text-center py-4">No screenings found</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = screenings.map(screening => {
+                const startTime = new Date(screening.startTime);
+                const endTime = new Date(screening.endTime);
+                const now = new Date();
+                const isPast = startTime < now;
+                const statusBadge = isPast ? 
+                    '<span class="badge bg-secondary">Past</span>' : 
+                    '<span class="badge bg-success">Upcoming</span>';
+
+                return `
+                    <tr>
+                        <td>${screening.id}</td>
+                        <td><strong>${screening.movieTitle || 'N/A'}</strong></td>
+                        <td>${screening.hallName || 'N/A'}</td>
+                        <td>${formatDateTime(startTime)}</td>
+                        <td>${formatDateTime(endTime)}</td>
+                        <td>$${screening.basePrice?.toFixed(2) || '0.00'}</td>
+                        <td><span class="badge bg-info">${screening.availableSeats || 0}</span></td>
+                        <td>${statusBadge}</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary" onclick="editScreening(${screening.id})" ${isPast ? 'disabled' : ''}>
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="deleteScreening(${screening.id})" ${isPast ? 'disabled' : ''}>
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function formatDateTime(date) {
+            const options = { 
+                year: 'numeric', 
+                month: 'short', 
+                day: 'numeric', 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            };
+            return date.toLocaleDateString('en-US', options);
+        }
+
+        function renderPagination(data) {
+            const nav = document.getElementById('paginationNav');
+            if (data.totalPages <= 1) {
+                nav.innerHTML = '';
+                return;
+            }
+
+            let html = '<ul class="pagination pagination-sm mb-0 justify-content-center">';
+            
+            html += `<li class="page-item ${data.first ? 'disabled' : ''}">
+                <a class="page-link" href="#" onclick="loadScreenings(${currentPage - 1}); return false;">Previous</a>
+            </li>`;
+
+            for (let i = 0; i < data.totalPages; i++) {
+                if (i === 0 || i === data.totalPages - 1 || Math.abs(i - currentPage) <= 2) {
+                    html += `<li class="page-item ${i === currentPage ? 'active' : ''}">
+                        <a class="page-link" href="#" onclick="loadScreenings(${i}); return false;">${i + 1}</a>
+                    </li>`;
+                } else if (Math.abs(i - currentPage) === 3) {
+                    html += '<li class="page-item disabled"><span class="page-link">...</span></li>';
+                }
+            }
+
+            html += `<li class="page-item ${data.last ? 'disabled' : ''}">
+                <a class="page-link" href="#" onclick="loadScreenings(${currentPage + 1}); return false;">Next</a>
+            </li>`;
+            
+            html += '</ul>';
+            nav.innerHTML = html;
+        }
+
+        function addScreening() {
+            const screeningData = {
+                movieId: parseInt(document.getElementById('addMovieId').value),
+                hallId: parseInt(document.getElementById('addHallId').value),
+                startTime: document.getElementById('addStartTime').value,
+                basePrice: parseFloat(document.getElementById('addBasePrice').value)
+            };
+
+            fetch('/api/v1/screenings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(screeningData)
+            })
+            .then(response => {
+                if (response.ok) {
+                    bootstrap.Modal.getInstance(document.getElementById('addScreeningModal')).hide();
+                    document.getElementById('addScreeningForm').reset();
+                    loadScreenings(currentPage);
+                    alert('Screening scheduled successfully!');
+                } else {
+                    return response.json().then(data => {
+                        throw new Error(data.message || 'Failed to schedule screening');
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to schedule screening: ' + error.message);
+            });
+        }
+
+        function editScreening(id) {
+            fetch(`/api/v1/screenings/${id}`)
+                .then(response => response.json())
+                .then(screening => {
+                    document.getElementById('editId').value = screening.id;
+                    document.getElementById('editMovieId').value = screening.movieId;
+                    document.getElementById('editHallId').value = screening.hallId;
+                    document.getElementById('editStartTime').value = screening.startTime.substring(0, 16);
+                    document.getElementById('editBasePrice').value = screening.basePrice;
+                    
+                    new bootstrap.Modal(document.getElementById('editScreeningModal')).show();
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Failed to load screening details');
+                });
+        }
+
+        function updateScreening() {
+            const id = document.getElementById('editId').value;
+            const screeningData = {
+                movieId: parseInt(document.getElementById('editMovieId').value),
+                hallId: parseInt(document.getElementById('editHallId').value),
+                startTime: document.getElementById('editStartTime').value,
+                basePrice: parseFloat(document.getElementById('editBasePrice').value)
+            };
+
+            fetch(`/api/v1/screenings/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(screeningData)
+            })
+            .then(response => {
+                if (response.ok) {
+                    bootstrap.Modal.getInstance(document.getElementById('editScreeningModal')).hide();
+                    loadScreenings(currentPage);
+                    alert('Screening updated successfully!');
+                } else {
+                    return response.json().then(data => {
+                        throw new Error(data.message || 'Failed to update screening');
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to update screening: ' + error.message);
+            });
+        }
+
+        function deleteScreening(id) {
+            if (!confirm('Are you sure you want to delete this screening? This action cannot be undone.')) return;
+
+            fetch(`/api/v1/screenings/${id}`, { method: 'DELETE' })
+                .then(response => {
+                    if (response.ok) {
+                        loadScreenings(currentPage);
+                        alert('Screening deleted successfully!');
+                    } else {
+                        throw new Error('Failed to delete screening');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Failed to delete screening. It may have existing bookings.');
+                });
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadDropdownData();
+            loadScreenings();
+            
+            // Set minimum date to today for date inputs
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('dateFromFilter').setAttribute('min', today);
+            document.getElementById('dateToFilter').setAttribute('min', today);
+            
+            // Set minimum datetime to now for screening times
+            const now = new Date();
+            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+            document.getElementById('addStartTime').setAttribute('min', now.toISOString().slice(0, 16));
+            document.getElementById('editStartTime').setAttribute('min', now.toISOString().slice(0, 16));
+        });
+    </script>
+</body>
+</html>

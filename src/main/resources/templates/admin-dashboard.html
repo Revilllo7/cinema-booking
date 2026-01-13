@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments/head :: head}"></head>
+<body>
+    <div th:replace="~{fragments/navbar :: navbar}"></div>
+    
+    <main class="container my-5">
+        <!-- Admin Dashboard Header -->
+        <div class="text-center mb-5">
+            <h1 class="display-4 text-cinema-primary">
+                <i class="bi bi-shield-lock-fill"></i> Admin Dashboard
+            </h1>
+            <p class="lead text-muted">Manage your cinema system</p>
+        </div>
+
+        <!-- Quick Stats Cards -->
+        <div class="row mb-4">
+            <div class="col-md-4 mb-3">
+                <div class="card admin-stat-card">
+                    <div class="card-body text-center">
+                        <i class="bi bi-film fs-1 text-cinema-primary"></i>
+                        <h3 class="mt-3" id="totalMovies">-</h3>
+                        <p class="text-muted">Total Movies</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="card admin-stat-card">
+                    <div class="card-body text-center">
+                        <i class="bi bi-camera-reels fs-1 text-cinema-primary"></i>
+                        <h3 class="mt-3" id="activeScreenings">-</h3>
+                        <p class="text-muted">Active Screenings</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="card admin-stat-card">
+                    <div class="card-body text-center">
+                        <i class="bi bi-ticket-perforated fs-1 text-cinema-primary"></i>
+                        <h3 class="mt-3" id="totalBookings">-</h3>
+                        <p class="text-muted">Total Bookings</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Admin Sections -->
+        <div class="row">
+            <!-- Manage Movies Section -->
+            <div class="col-lg-4 mb-4">
+                <div class="card admin-section-card h-100">
+                    <div class="card-header bg-cinema-primary text-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-film"></i> Manage Movies
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="card-text">Add, edit, and remove movies from your cinema database. Manage movie details, posters, trailers, and more.</p>
+                        <ul class="list-unstyled">
+                            <li><i class="bi bi-check-circle text-success"></i> Add new movies</li>
+                            <li><i class="bi bi-check-circle text-success"></i> Edit movie details</li>
+                            <li><i class="bi bi-check-circle text-success"></i> Upload posters & trailers</li>
+                            <li><i class="bi bi-check-circle text-success"></i> Delete movies</li>
+                        </ul>
+                    </div>
+                    <div class="card-footer bg-transparent">
+                        <a href="/admin/movies" th:href="@{/admin/movies}" class="btn btn-cinema w-100">
+                            <i class="bi bi-gear"></i> Manage Movies
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Manage Screenings Section -->
+            <div class="col-lg-4 mb-4">
+                <div class="card admin-section-card h-100">
+                    <div class="card-header bg-cinema-primary text-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-camera-reels"></i> Manage Screenings
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="card-text">Schedule and manage movie screenings. Create new screenings with automatic time conflict validation.</p>
+                        <ul class="list-unstyled">
+                            <li><i class="bi bi-check-circle text-success"></i> Schedule screenings</li>
+                            <li><i class="bi bi-check-circle text-success"></i> Assign halls</li>
+                            <li><i class="bi bi-check-circle text-success"></i> Time conflict detection</li>
+                            <li><i class="bi bi-check-circle text-success"></i> Edit & delete screenings</li>
+                        </ul>
+                    </div>
+                    <div class="card-footer bg-transparent">
+                        <a href="/admin/screenings" th:href="@{/admin/screenings}" class="btn btn-cinema w-100">
+                            <i class="bi bi-calendar-event"></i> Manage Screenings
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sales Statistics Section -->
+            <div class="col-lg-4 mb-4">
+                <div class="card admin-section-card h-100">
+                    <div class="card-header bg-cinema-primary text-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-graph-up"></i> Sales Statistics
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="card-text">View detailed sales reports and booking statistics. Track revenue and ticket sales over time.</p>
+                        <ul class="list-unstyled">
+                            <li><i class="bi bi-check-circle text-success"></i> Daily revenue reports</li>
+                            <li><i class="bi bi-check-circle text-success"></i> Ticket sales analytics</li>
+                            <li><i class="bi bi-check-circle text-success"></i> Visual charts</li>
+                            <li><i class="bi bi-check-circle text-success"></i> Monthly summaries</li>
+                        </ul>
+                    </div>
+                    <div class="card-footer bg-transparent">
+                        <a href="/admin/stats" th:href="@{/admin/stats}" class="btn btn-cinema w-100">
+                            <i class="bi bi-bar-chart"></i> View Statistics
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Activity Section (Optional) -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">
+                            <i class="bi bi-clock-history"></i> Quick Actions
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row text-center">
+                            <div class="col-md-3 mb-2">
+                                <a href="/admin/movies" th:href="@{/admin/movies}" class="btn btn-outline-primary w-100">
+                                    <i class="bi bi-plus-circle"></i> Add Movie
+                                </a>
+                            </div>
+                            <div class="col-md-3 mb-2">
+                                <a href="/admin/screenings" th:href="@{/admin/screenings}" class="btn btn-outline-primary w-100">
+                                    <i class="bi bi-plus-circle"></i> Add Screening
+                                </a>
+                            </div>
+                            <div class="col-md-3 mb-2">
+                                <a href="/admin/stats" th:href="@{/admin/stats}" class="btn btn-outline-primary w-100">
+                                    <i class="bi bi-graph-up"></i> View Reports
+                                </a>
+                            </div>
+                            <div class="col-md-3 mb-2">
+                                <a href="/profile/bookings" th:href="@{/profile/bookings}" class="btn btn-outline-primary w-100">
+                                    <i class="bi bi-ticket"></i> View Bookings
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div th:replace="~{fragments/footer :: footer}"></div>
+
+    <script>
+        // Load quick stats
+        document.addEventListener('DOMContentLoaded', function() {
+            // Fetch total movies
+            fetch('/api/v1/movies?page=0&size=1')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.totalElements !== undefined) {
+                        document.getElementById('totalMovies').textContent = data.totalElements;
+                    }
+                })
+                .catch(() => document.getElementById('totalMovies').textContent = 'N/A');
+
+            // Fetch active screenings
+            fetch('/api/v1/screenings?page=0&size=1')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.totalElements !== undefined) {
+                        document.getElementById('activeScreenings').textContent = data.totalElements;
+                    }
+                })
+                .catch(() => document.getElementById('activeScreenings').textContent = 'N/A');
+
+            // Fetch total bookings (admin endpoint)
+            fetch('/api/v1/admin/bookings?page=0&size=1')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.totalElements !== undefined) {
+                        document.getElementById('totalBookings').textContent = data.totalElements;
+                    }
+                })
+                .catch(() => document.getElementById('totalBookings').textContent = 'N/A');
+        });
+    </script>
+</body>
+</html>

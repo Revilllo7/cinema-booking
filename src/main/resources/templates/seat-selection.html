@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head}"></head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+<main class="container my-5">
+    <h1 class="mb-4">Select Your Seats</h1>
+    <div class="row">
+        <div class="col-lg-8 mb-4">
+            <div class="screen-label">SCREEN</div>
+            <div id="seatMap" class="seat-map"></div>
+            <div class="mt-3">
+                <span class="seat seat-free"></span> Free
+                <span class="seat seat-occupied ms-3"></span> Occupied
+                <span class="seat seat-selected ms-3"></span> Selected
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5>Your Selection</h5>
+                    <ul id="selectedSeats" class="list-group list-group-flush mb-3"></ul>
+                    <div class="d-grid gap-2">
+                        <a class="btn btn-cinema" href="/cart">Go to Cart</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+<div th:replace="~{fragments/footer :: footer}"></div>
+<script>
+    const seatMapEl = document.getElementById('seatMap');
+    const selectedSeatsEl = document.getElementById('selectedSeats');
+    const screeningId = new URLSearchParams(window.location.search).get('screeningId');
+    const storedScreeningId = localStorage.getItem('currentScreeningId');
+    const selected = new Set(JSON.parse(localStorage.getItem('selectedSeats') || '[]'));
+
+    // Clear selected seats if switching to a different screening
+    if (screeningId && storedScreeningId && screeningId !== storedScreeningId) {
+        selected.clear();
+    }
+    
+    // Store current screening ID
+    if (screeningId) {
+        localStorage.setItem('currentScreeningId', screeningId);
+    }
+
+    function renderSelected() {
+        const arr = Array.from(selected).sort();
+        selectedSeatsEl.innerHTML = arr.length ? arr.map(s => `<li class="list-group-item d-flex justify-content-between align-items-center">${s}<button class="btn btn-sm btn-outline-danger" onclick="removeSeat('${s}')">Remove</button></li>`).join('') : '<li class="list-group-item text-muted">No seats selected</li>';
+        localStorage.setItem('selectedSeats', JSON.stringify(arr));
+    }
+    function removeSeat(seat) {
+        selected.delete(seat);
+        syncCartFromSelected();
+        renderSelected();
+        // Rebuild map to update button state
+        const rows = seatMapEl.dataset.rows ? parseInt(seatMapEl.dataset.rows) : 10;
+        const cols = seatMapEl.dataset.cols ? parseInt(seatMapEl.dataset.cols) : 12;
+        const occupied = new Set(JSON.parse(seatMapEl.dataset.occupied || '[]'));
+        buildSeatMap(rows, cols, occupied);
+    }
+
+    function syncCartFromSelected() {
+        // Keep cartItems in sync with current selection (default ticket type Normal)
+        const existing = new Map((JSON.parse(localStorage.getItem('cartItems') || '[]')).map(i => [i.seat, i]));
+        const updated = Array.from(selected).map(seat => {
+            const prev = existing.get(seat);
+            return prev ? prev : { seat, type: 'Normal' };
+        });
+        localStorage.setItem('cartItems', JSON.stringify(updated));
+    }
+
+    function buildSeatMap(rows, cols, occupiedSet) {
+        seatMapEl.dataset.rows = rows;
+        seatMapEl.dataset.cols = cols;
+        seatMapEl.dataset.occupied = JSON.stringify(Array.from(occupiedSet));
+        seatMapEl.innerHTML = '';
+        for (let r = 1; r <= rows; r++) {
+            const rowEl = document.createElement('div');
+            rowEl.className = 'seat-row';
+            for (let c = 1; c <= cols; c++) {
+                const seatId = `${r}-${c}`;
+                const seatEl = document.createElement('button');
+                seatEl.type = 'button';
+                seatEl.className = 'seat ' + (occupiedSet.has(seatId) ? 'seat-occupied' : selected.has(seatId) ? 'seat-selected' : 'seat-free');
+                seatEl.textContent = c;
+                seatEl.title = `Row ${r}, Seat ${c}`;
+                seatEl.disabled = occupiedSet.has(seatId);
+                seatEl.onclick = () => {
+                    if (selected.has(seatId)) selected.delete(seatId); else selected.add(seatId);
+                    syncCartFromSelected();
+                    buildSeatMap(rows, cols, occupiedSet);
+                    renderSelected();
+                };
+                rowEl.appendChild(seatEl);
+            }
+            seatMapEl.appendChild(rowEl);
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', async function() {
+        if (!screeningId) {
+            seatMapEl.innerHTML = '<div class="alert alert-warning">No screening selected. Please go back and choose a screening.</div>';
+            return;
+        }
+
+        try {
+            const res = await fetch(`/api/v1/screenings/${screeningId}/seats`);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const data = await res.json();
+
+            const rows = Number.isInteger(data.rows) ? data.rows : null;
+            const cols = Number.isInteger(data.cols) ? data.cols : null;
+            if (!rows || !cols) throw new Error('Seat map missing rows/cols');
+
+            const occupied = new Set((data.occupied || []).map(s => String(s)));
+
+            // Drop any selected seats that are out of range for this hall
+            Array.from(selected).forEach(seatId => {
+                const [r, c] = seatId.split('-').map(Number);
+                if (!Number.isInteger(r) || !Number.isInteger(c) || r < 1 || c < 1 || r > rows || c > cols) {
+                    selected.delete(seatId);
+                }
+            });
+
+            buildSeatMap(rows, cols, occupied);
+            renderSelected();
+            syncCartFromSelected();
+        } catch (err) {
+            console.error('Failed to load seat map', err);
+            seatMapEl.innerHTML = '<div class="alert alert-danger">Unable to load seat map for this screening. Please try again later.</div>';
+        }
+    });
+</script>
+</body>
+</html>

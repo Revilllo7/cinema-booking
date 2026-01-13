@@ -35,6 +35,7 @@ public class BookingService {
     private final ScreeningRepository screeningRepository;
     private final SeatRepository seatRepository;
     private final TicketTypeRepository ticketTypeRepository;
+    private final SeatReservationService seatReservationService;
 
     @Transactional(readOnly = true)
     public Page<BookingDTO> getAllBookings(Pageable pageable) {
@@ -223,6 +224,9 @@ public class BookingService {
         Booking confirmedBooking = bookingRepository.save(booking);
         log.info("Booking confirmed successfully: {}", confirmedBooking.getId());
 
+        // Broadcast seat status changes to all connected clients
+        seatReservationService.broadcastSeatMap(confirmedBooking.getScreening().getId());
+
         return convertToDto(confirmedBooking);
     }
 
@@ -240,6 +244,9 @@ public class BookingService {
         booking.getBookingSeats().forEach(bs -> bs.setSeatStatus(BookingSeat.SeatStatus.AVAILABLE));
         Booking cancelledBooking = bookingRepository.save(booking);
         log.info("Booking cancelled successfully: {}", cancelledBooking.getId());
+
+        // Broadcast seat status changes to all connected clients
+        seatReservationService.broadcastSeatMap(cancelledBooking.getScreening().getId());
 
         return convertToDto(cancelledBooking);
     }

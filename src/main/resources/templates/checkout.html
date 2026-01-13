@@ -16,28 +16,47 @@
             <div class="card">
                 <div class="card-body">
                     <h5>Payment Simulation</h5>
-                    <div class="mb-3">
-                        <label class="form-label">Name on Card</label>
-                        <input class="form-control" placeholder="John Doe">
-                    </div>
-                    <div class="row">
-                        <div class="col-md-8 mb-3">
-                            <label class="form-label">Card Number</label>
-                            <input class="form-control" placeholder="4111 1111 1111 1111">
+                    <div id="checkoutAlert" class="alert alert-danger d-none"></div>
+                    <form id="checkoutForm" class="needs-validation" novalidate>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label" for="customerEmail">Contact Email</label>
+                                <input class="form-control" id="customerEmail" name="customerEmail" type="email" placeholder="you@example.com" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label" for="customerPhone">Phone (optional)</label>
+                                <input class="form-control" id="customerPhone" name="customerPhone" placeholder="+48123456789">
+                            </div>
                         </div>
-                        <div class="col-md-2 mb-3">
-                            <label class="form-label">Expiry</label>
-                            <input class="form-control" placeholder="12/28">
+                        <div class="mb-3">
+                            <label class="form-label" for="cardholderName">Name on Card</label>
+                            <input class="form-control" id="cardholderName" name="cardholderName" placeholder="John Doe" required>
                         </div>
-                        <div class="col-md-2 mb-3">
-                            <label class="form-label">CVV</label>
-                            <input class="form-control" placeholder="123">
+                        <div class="row">
+                            <div class="col-md-8 mb-3">
+                                <label class="form-label">Card Number</label>
+                                <input class="form-control" placeholder="4111 1111 1111 1111" disabled>
+                            </div>
+                            <div class="col-md-2 mb-3">
+                                <label class="form-label">Expiry</label>
+                                <input class="form-control" placeholder="12/28" disabled>
+                            </div>
+                            <div class="col-md-2 mb-3">
+                                <label class="form-label">CVV</label>
+                                <input class="form-control" placeholder="123" disabled>
+                            </div>
                         </div>
-                    </div>
-                    <div class="d-grid">
-                        <button id="payBtn" class="btn btn-cinema">Pay & Confirm</button>
-                    </div>
+                        <div class="d-grid">
+                            <button id="payBtn" class="btn btn-cinema" type="submit">Pay & Confirm</button>
+                        </div>
+                    </form>
                     <div id="confirmation" class="alert alert-success mt-3 d-none"></div>
+                    <div id="qrContainer" class="text-center d-none">
+                        <img id="qrImage" class="img-fluid mb-2" alt="Ticket QR">
+                        <div>
+                            <a id="qrDownload" class="btn btn-outline-secondary btn-sm" download>Download QR</a>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -53,87 +72,151 @@
 </main>
 <div th:replace="~{fragments/footer :: footer}"></div>
 <script>
-    const PRICES = { Normal: 30.0, Ulgowy: 22.0, Rodzinny: 20.0 };
-    const TICKET_TYPE_IDS = { Normal: 1, Ulgowy: 2, Rodzinny: 4 };
-    function loadOrder() { return JSON.parse(localStorage.getItem('cartItems') || '[]'); }
-    function renderOrder() {
-        const items = loadOrder();
-        const list = document.getElementById('orderSummary');
-        list.innerHTML = items.length ? items.map(i => `<li class="list-group-item d-flex justify-content-between"><span>${i.seat} - ${i.type}</span><span>${PRICES[i.type].toFixed(2)}</span></li>`).join('') : '<li class="list-group-item text-muted">Cart is empty</li>';
-        const total = items.reduce((sum, i) => sum + PRICES[i.type], 0);
-        document.getElementById('totalDisplay').textContent = total.toFixed(2);
-        return { items, total };
-    }
-    async function confirmBooking(order) {
-        // Get screeningId from localStorage (set during seat selection)
-        const screeningId = localStorage.getItem('currentScreeningId');
-        
+(() => {
+    const screeningId = localStorage.getItem('currentScreeningId');
+    const orderSummaryEl = document.getElementById('orderSummary');
+    const totalDisplayEl = document.getElementById('totalDisplay');
+    const checkoutForm = document.getElementById('checkoutForm');
+    const confirmationEl = document.getElementById('confirmation');
+    const alertEl = document.getElementById('checkoutAlert');
+    const qrContainer = document.getElementById('qrContainer');
+    const qrImage = document.getElementById('qrImage');
+    const qrDownload = document.getElementById('qrDownload');
+    const payBtn = document.getElementById('payBtn');
+    let cartState = { items: [] };
+
+    document.addEventListener('DOMContentLoaded', async () => {
         if (!screeningId) {
-            throw new Error('No screening selected. Please go back and select seats.');
+            showAlert('No screening selected. Return to seat selection to start checkout.');
+            disableCheckout();
+            return;
         }
-        
+        await loadCart();
+        checkoutForm.addEventListener('submit', submitCheckout);
+    });
+
+    async function loadCart() {
         try {
-            // Step 1: Create booking (userId will be retrieved from authentication on backend)
-            const bookingPayload = {
-                screeningId: parseInt(screeningId),
-                seats: order.items.map(i => {
-                    const [rowNumber, seatNumber] = (i.seat || '').split('-').map(Number);
-                    const ticketTypeId = TICKET_TYPE_IDS[i.type] || 1;
-                    return {
-                        seatId: i.seatId || null,
-                        rowNumber: Number.isInteger(rowNumber) ? rowNumber : null,
-                        seatNumber: Number.isInteger(seatNumber) ? seatNumber : null,
-                        ticketTypeId
-                    };
-                }),
-                customerEmail: 'user@example.com', // Should be retrieved from user session
-                customerPhone: null
-            };
-            
-            const createRes = await fetch('/api/v1/bookings', {
+            const res = await fetch(`/api/v1/screenings/${screeningId}/cart`);
+            if (!res.ok) throw new Error('Unable to load cart');
+            cartState = await res.json();
+            renderOrder();
+        } catch (error) {
+            console.error('Checkout cart load failed', error);
+            cartState = { items: [] };
+            renderOrder();
+            showAlert('We could not load your cart. Please refresh the page.');
+        }
+    }
+
+    function renderOrder() {
+        const items = cartState.items || [];
+        if (!items.length) {
+            orderSummaryEl.innerHTML = '<li class="list-group-item text-muted">Cart is empty</li>';
+            totalDisplayEl.textContent = '0.00';
+            disableCheckout();
+            return;
+        }
+
+        orderSummaryEl.innerHTML = items.map(item => `
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+                <span>Row ${item.rowNumber}, Seat ${item.seatNumber} - ${formatTicket(item.ticketType)}</span>
+                <span>${formatPrice(item.price)}</span>
+            </li>
+        `).join('');
+        totalDisplayEl.textContent = formatPrice(cartState.subtotal);
+        enableCheckout();
+    }
+
+    async function submitCheckout(event) {
+        event.preventDefault();
+        if (!cartState.items || !cartState.items.length) {
+            showAlert('Your cart is empty.');
+            return;
+        }
+        const payload = {
+            customerEmail: checkoutForm.customerEmail.value,
+            customerPhone: checkoutForm.customerPhone.value,
+            cardholderName: checkoutForm.cardholderName.value,
+            paymentMethod: 'CARD'
+        };
+        try {
+            payBtn.disabled = true;
+            payBtn.textContent = 'Processing...';
+            const res = await fetch(`/api/v1/screenings/${screeningId}/checkout`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(bookingPayload)
+                body: JSON.stringify(payload)
             });
-            
-            if (!createRes.ok) {
-                const errorText = await createRes.text();
-                throw new Error('Failed to create booking: ' + createRes.status + ' - ' + errorText);
+            if (res.status === 401) {
+                throw new Error('Please log in to finish checkout.');
             }
-            const booking = await createRes.json();
-            
-            // Step 2: Confirm booking with payment details
-            const confirmRes = await fetch(`/api/v1/bookings/${booking.id}/confirm?paymentMethod=CARD&paymentReference=PAY-${Date.now()}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' }
-            });
-            
-            if (!confirmRes.ok) {
-                const errorText = await confirmRes.text();
-                throw new Error('Failed to confirm booking: ' + confirmRes.status + ' - ' + errorText);
+            if (!res.ok) {
+                throw new Error(await res.text() || 'Checkout failed');
             }
-            const confirmedBooking = await confirmRes.json();
-            
-            return confirmedBooking.bookingNumber || 'TICKET-XXXXXX';
-        } catch (e) {
-            console.error('Booking error:', e);
-            alert('Booking failed: ' + e.message);
-            throw e; // Re-throw to prevent showing false success
+            const data = await res.json();
+            displayConfirmation(data);
+        } catch (error) {
+            console.error('Checkout failed', error);
+            showAlert(error.message || 'Payment failed. Please try again.');
+        } finally {
+            payBtn.disabled = false;
+            payBtn.textContent = 'Pay & Confirm';
         }
     }
-    document.addEventListener('DOMContentLoaded', () => {
-        const order = renderOrder();
-        document.getElementById('payBtn').onclick = async () => {
-            const ticketId = await confirmBooking(order);
-            const msg = `Payment successful. Your Ticket ID: ${ticketId}`;
-            const el = document.getElementById('confirmation');
-            el.textContent = msg;
-            el.classList.remove('d-none');
-            // Persist booking state & clear cart
-            localStorage.removeItem('cartItems');
-            localStorage.removeItem('selectedSeats');
-        };
-    });
+
+    function displayConfirmation(data) {
+        confirmationEl.textContent = `Payment successful. Booking ${data.bookingNumber} confirmed.`;
+        confirmationEl.classList.remove('d-none');
+        hideAlert();
+        renderQr(data);
+        cartState = { items: [] };
+        orderSummaryEl.innerHTML = '<li class="list-group-item text-muted">All seats confirmed</li>';
+        totalDisplayEl.textContent = '0.00';
+        disableCheckout();
+    }
+
+    function renderQr(data) {
+        if (!data.qrCodeImage) {
+            qrContainer.classList.add('d-none');
+            return;
+        }
+        const src = `data:image/png;base64,${data.qrCodeImage}`;
+        qrImage.src = src;
+        qrImage.alt = `Ticket QR ${data.bookingNumber}`;
+        qrDownload.href = src;
+        qrDownload.download = `${data.bookingNumber || 'ticket'}.png`;
+        qrContainer.classList.remove('d-none');
+    }
+
+    function formatTicket(name) {
+        return name?.toString().replace('_', ' ') || 'Ticket';
+    }
+
+    function formatPrice(value) {
+        return (Number(value) || 0).toFixed(2);
+    }
+
+    function showAlert(message) {
+        if (!alertEl) return;
+        alertEl.textContent = message;
+        alertEl.classList.remove('d-none');
+    }
+
+    function hideAlert() {
+        if (!alertEl) return;
+        alertEl.classList.add('d-none');
+    }
+
+    function disableCheckout() {
+        payBtn.disabled = true;
+    }
+
+    function enableCheckout() {
+        payBtn.disabled = false;
+        hideAlert();
+    }
+})();
 </script>
 </body>
 </html>

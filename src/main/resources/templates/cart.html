@@ -5,6 +5,7 @@
 <div th:replace="~{fragments/navbar :: navbar}"></div>
 <main class="container my-5">
     <h1 class="mb-4">Your Cart</h1>
+    <div id="cartAlert" class="alert alert-warning d-none"></div>
     <div class="row">
         <div class="col-lg-8">
             <table class="table align-middle">
@@ -26,7 +27,7 @@
                     <p class="d-flex justify-content-between"><span>Items</span><span id="itemCount">0</span></p>
                     <p class="d-flex justify-content-between"><span>Total</span><strong id="totalPrice">0.00</strong></p>
                     <div class="d-grid gap-2">
-                        <a class="btn btn-cinema" href="/checkout">Proceed to Checkout</a>
+                        <a id="checkoutBtn" class="btn btn-cinema" href="/checkout">Proceed to Checkout</a>
                     </div>
                 </div>
             </div>
@@ -35,62 +36,179 @@
 </main>
 <div th:replace="~{fragments/footer :: footer}"></div>
 <script>
-    const PRICES = { Normal: 30.0, Ulgowy: 22.0, Rodzinny: 20.0 };
-    const cartKey = 'cartItems';
+(() => {
     const screeningId = localStorage.getItem('currentScreeningId');
+    const cartBody = document.getElementById('cartBody');
+    const itemCountEl = document.getElementById('itemCount');
+    const totalPriceEl = document.getElementById('totalPrice');
+    const checkoutBtn = document.getElementById('checkoutBtn');
+    const alertEl = document.getElementById('cartAlert');
+    let cartState = { items: [] };
+    let ticketOptions = [];
 
-    function loadCart() {
-        const seats = JSON.parse(localStorage.getItem('selectedSeats') || '[]');
-        const items = JSON.parse(localStorage.getItem(cartKey) || '[]');
-        const map = new Map(items.map(i => [i.seat, i]));
-        seats.forEach(s => { if (!map.has(s)) map.set(s, { seat: s, type: 'Normal' }); });
-        const normalized = Array.from(map.values());
-        localStorage.setItem(cartKey, JSON.stringify(normalized));
-        return normalized;
+    document.addEventListener('DOMContentLoaded', async () => {
+        if (!screeningId) {
+            showAlert('Select a screening to start building your cart.');
+            checkoutBtn.classList.add('disabled');
+            checkoutBtn.setAttribute('tabindex', '-1');
+            cartBody.innerHTML = '<tr><td colspan="4" class="text-muted">No screening selected</td></tr>';
+            return;
+        }
+        await Promise.all([loadTicketOptions(), loadCart()]);
+        // Update lock expiration countdowns every second (DOM-only to preserve dropdown state)
+        setInterval(updateCountdowns, 1000);
+    });
+
+    async function loadTicketOptions() {
+        try {
+            const res = await fetch(`/api/v1/screenings/${screeningId}/cart/ticket-options`);
+            if (!res.ok) return;
+            ticketOptions = await res.json();
+        } catch (error) {
+            console.warn('Unable to fetch ticket options', error);
+        }
+    }
+
+    async function loadCart() {
+        try {
+            const res = await fetch(`/api/v1/screenings/${screeningId}/cart`);
+            if (!res.ok) throw new Error('Unable to load cart');
+            cartState = await res.json();
+            renderCart();
+        } catch (error) {
+            console.error('Cart load failed', error);
+            cartState = { items: [] };
+            renderCart();
+            showAlert('We could not load your cart. Please refresh.');
+        }
     }
 
     function renderCart() {
-        const items = loadCart();
-        const body = document.getElementById('cartBody');
-        body.innerHTML = items.length ? items.map(i => `
+        const items = cartState.items || [];
+        if (!items.length) {
+            cartBody.innerHTML = '<tr><td colspan="4" class="text-muted">No items in cart</td></tr>';
+            itemCountEl.textContent = '0';
+            totalPriceEl.textContent = '0.00';
+            checkoutBtn.classList.add('disabled');
+            checkoutBtn.setAttribute('tabindex', '-1');
+            return;
+        }
+
+        cartBody.innerHTML = items.map(item => `
             <tr>
-                <td>${i.seat}</td>
+                <td>Row ${item.rowNumber}, Seat ${item.seatNumber}</td>
                 <td>
-                    <select class="form-select form-select-sm" onchange="updateType('${i.seat}', this.value)">
-                        <option ${i.type==='Normal'?'selected':''}>Normal</option>
-                        <option ${i.type==='Ulgowy'?'selected':''}>Ulgowy</option>
-                        <option ${i.type==='Rodzinny'?'selected':''}>Rodzinny</option>
-                    </select>
+                    ${renderTicketSelect(item)}
                 </td>
-                <td class="text-end">${PRICES[i.type].toFixed(2)}</td>
+                <td class="text-end">${formatPrice(item.price)}</td>
                 <td class="text-end">
-                    <button class="btn btn-sm btn-outline-danger" onclick="removeItem('${i.seat}')">Remove</button>
+                    <button class="btn btn-sm btn-outline-danger" data-seat-id="${item.seatId}">Remove</button>
                 </td>
             </tr>
-        `).join('') : '<tr><td colspan="4" class="text-muted">No items in cart</td></tr>';
-        document.getElementById('itemCount').textContent = items.length;
-        const total = items.reduce((sum, i) => sum + PRICES[i.type], 0);
-        document.getElementById('totalPrice').textContent = total.toFixed(2);
+            <tr>
+                <td colspan="4">
+                    <small class="text-muted">Hold expires ${formatCountdown(item.lockExpiresAt)}</small>
+                </td>
+            </tr>
+        `).join('');
+
+        cartBody.querySelectorAll('select[data-seat-id]').forEach(select => {
+            select.addEventListener('change', event => updateTicketType(Number(select.dataset.seatId), Number(event.target.value)));
+        });
+        cartBody.querySelectorAll('button[data-seat-id]').forEach(btn => {
+            btn.addEventListener('click', () => removeSeat(Number(btn.dataset.seatId)));
+        });
+
+        itemCountEl.textContent = items.length.toString();
+        totalPriceEl.textContent = formatPrice(cartState.subtotal);
+        checkoutBtn.classList.remove('disabled');
+        checkoutBtn.removeAttribute('tabindex');
+        hideAlert();
     }
 
-    function updateType(seat, type) {
-        const items = JSON.parse(localStorage.getItem(cartKey) || '[]');
-        items.forEach(i => { if (i.seat === seat) i.type = type; });
-        localStorage.setItem(cartKey, JSON.stringify(items));
-        renderCart();
+    function renderTicketSelect(item) {
+        if (!ticketOptions.length) {
+            return `<span class="badge text-bg-secondary">${formatTicketName(item.ticketType)}</span>`;
+        }
+        const options = ticketOptions.map(opt => {
+            const selected = opt.ticketTypeId === item.ticketTypeId ? 'selected' : '';
+            return `<option value="${opt.ticketTypeId}" ${selected}>${formatTicketName(opt.name)} (${formatPrice(opt.price)})</option>`;
+        }).join('');
+        return `<select data-seat-id="${item.seatId}" class="form-select form-select-sm">${options}</select>`;
     }
 
-    function removeItem(seat) {
-        let items = JSON.parse(localStorage.getItem(cartKey) || '[]');
-        items = items.filter(i => i.seat !== seat);
-        localStorage.setItem(cartKey, JSON.stringify(items));
-        let seats = JSON.parse(localStorage.getItem('selectedSeats') || '[]');
-        seats = seats.filter(s => s !== seat);
-        localStorage.setItem('selectedSeats', JSON.stringify(seats));
-        renderCart();
+    // Update only countdown text, preserving dropdown and button state
+    function updateCountdowns() {
+        const items = cartState.items || [];
+        items.forEach((item, idx) => {
+            const countdownRow = cartBody.querySelector(`tr:nth-child(${idx * 2 + 2})`);
+            if (countdownRow) {
+                const smallEl = countdownRow.querySelector('small');
+                if (smallEl) {
+                    smallEl.textContent = `Hold expires ${formatCountdown(item.lockExpiresAt)}`;
+                }
+            }
+        });
     }
 
-    document.addEventListener('DOMContentLoaded', renderCart);
+    async function updateTicketType(seatId, ticketTypeId) {
+        try {
+            const res = await fetch(`/api/v1/screenings/${screeningId}/cart/${seatId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ticketTypeId })
+            });
+            if (!res.ok) throw new Error(await res.text());
+            cartState = await res.json();
+            renderCart();
+        } catch (error) {
+            console.error('Failed to change ticket type', error);
+            showAlert('Unable to update ticket type. Please try again.');
+        }
+    }
+
+    async function removeSeat(seatId) {
+        try {
+            const res = await fetch(`/api/v1/screenings/${screeningId}/cart/${seatId}`, { method: 'DELETE' });
+            if (!res.ok) throw new Error(await res.text());
+            cartState = await res.json();
+            renderCart();
+        } catch (error) {
+            console.error('Failed to remove seat from cart', error);
+            showAlert('Unable to remove seat at the moment.');
+        }
+    }
+
+    function formatTicketName(name) {
+        return name?.toString().replace('_', ' ') || 'Ticket';
+    }
+
+    function formatPrice(value) {
+        const parsed = Number(value) || 0;
+        return parsed.toFixed(2);
+    }
+
+    function formatCountdown(timestamp) {
+        if (!timestamp) return 'soon';
+        const expiresAt = typeof timestamp === 'string' ? Date.parse(timestamp) : timestamp;
+        const delta = expiresAt - Date.now();
+        if (Number.isNaN(expiresAt) || delta <= 0) return 'soon';
+        const minutes = Math.floor(delta / 60000);
+        const seconds = Math.floor((delta % 60000) / 1000);
+        return `in ${minutes}m ${seconds.toString().padStart(2, '0')}s`;
+    }
+
+    function showAlert(message) {
+        if (!alertEl) return;
+        alertEl.textContent = message;
+        alertEl.classList.remove('d-none');
+    }
+
+    function hideAlert() {
+        if (!alertEl) return;
+        alertEl.classList.add('d-none');
+    }
+})();
 </script>
 </body>
 </html>

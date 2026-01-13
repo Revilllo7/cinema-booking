@@ -144,11 +144,16 @@ public class BookingRestController {
         @ApiResponse(responseCode = "404", description = "User or Screening not found")
     })
     @PostMapping
-    public ResponseEntity<BookingDTO> createBooking(@Valid @RequestBody BookingDTO bookingDTO) {
-        log.info("POST /api/v1/bookings - Creating booking for user: {}, screening: {}", 
-            bookingDTO.getUserId(), bookingDTO.getScreeningId());
+    public ResponseEntity<BookingDTO> createBooking(
+            @Valid @RequestBody BookingDTO bookingDTO,
+            org.springframework.security.core.Authentication authentication) {
         
-        BookingDTO createdBooking = bookingService.createBooking(bookingDTO);
+        // Get user from authentication
+        String username = authentication.getName();
+        log.info("POST /api/v1/bookings - Creating booking for user: {}, screening: {}", 
+            username, bookingDTO.getScreeningId());
+        
+        BookingDTO createdBooking = bookingService.createBookingForUser(username, bookingDTO);
         return ResponseEntity.status(HttpStatus.CREATED).body(createdBooking);
     }
 

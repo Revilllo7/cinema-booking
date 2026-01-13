@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head}"></head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+<main class="container my-5">
+    <h1 class="mb-4">Checkout</h1>
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h5>Order Summary</h5>
+                    <ul id="orderSummary" class="list-group list-group-flush"></ul>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-body">
+                    <h5>Payment Simulation</h5>
+                    <div class="mb-3">
+                        <label class="form-label">Name on Card</label>
+                        <input class="form-control" placeholder="John Doe">
+                    </div>
+                    <div class="row">
+                        <div class="col-md-8 mb-3">
+                            <label class="form-label">Card Number</label>
+                            <input class="form-control" placeholder="4111 1111 1111 1111">
+                        </div>
+                        <div class="col-md-2 mb-3">
+                            <label class="form-label">Expiry</label>
+                            <input class="form-control" placeholder="12/28">
+                        </div>
+                        <div class="col-md-2 mb-3">
+                            <label class="form-label">CVV</label>
+                            <input class="form-control" placeholder="123">
+                        </div>
+                    </div>
+                    <div class="d-grid">
+                        <button id="payBtn" class="btn btn-cinema">Pay & Confirm</button>
+                    </div>
+                    <div id="confirmation" class="alert alert-success mt-3 d-none"></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5>Total</h5>
+                    <p class="display-6" id="totalDisplay">0.00</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+<div th:replace="~{fragments/footer :: footer}"></div>
+<script>
+    const PRICES = { Normal: 30.0, Ulgowy: 22.0, Rodzinny: 20.0 };
+    const TICKET_TYPE_IDS = { Normal: 1, Ulgowy: 2, Rodzinny: 4 };
+    function loadOrder() { return JSON.parse(localStorage.getItem('cartItems') || '[]'); }
+    function renderOrder() {
+        const items = loadOrder();
+        const list = document.getElementById('orderSummary');
+        list.innerHTML = items.length ? items.map(i => `<li class="list-group-item d-flex justify-content-between"><span>${i.seat} - ${i.type}</span><span>${PRICES[i.type].toFixed(2)}</span></li>`).join('') : '<li class="list-group-item text-muted">Cart is empty</li>';
+        const total = items.reduce((sum, i) => sum + PRICES[i.type], 0);
+        document.getElementById('totalDisplay').textContent = total.toFixed(2);
+        return { items, total };
+    }
+    async function confirmBooking(order) {
+        // Get screeningId from localStorage (set during seat selection)
+        const screeningId = localStorage.getItem('currentScreeningId');
+        
+        if (!screeningId) {
+            throw new Error('No screening selected. Please go back and select seats.');
+        }
+        
+        try {
+            // Step 1: Create booking (userId will be retrieved from authentication on backend)
+            const bookingPayload = {
+                screeningId: parseInt(screeningId),
+                seats: order.items.map(i => {
+                    const [rowNumber, seatNumber] = (i.seat || '').split('-').map(Number);
+                    const ticketTypeId = TICKET_TYPE_IDS[i.type] || 1;
+                    return {
+                        seatId: i.seatId || null,
+                        rowNumber: Number.isInteger(rowNumber) ? rowNumber : null,
+                        seatNumber: Number.isInteger(seatNumber) ? seatNumber : null,
+                        ticketTypeId
+                    };
+                }),
+                customerEmail: 'user@example.com', // Should be retrieved from user session
+                customerPhone: null
+            };
+            
+            const createRes = await fetch('/api/v1/bookings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(bookingPayload)
+            });
+            
+            if (!createRes.ok) {
+                const errorText = await createRes.text();
+                throw new Error('Failed to create booking: ' + createRes.status + ' - ' + errorText);
+            }
+            const booking = await createRes.json();
+            
+            // Step 2: Confirm booking with payment details
+            const confirmRes = await fetch(`/api/v1/bookings/${booking.id}/confirm?paymentMethod=CARD&paymentReference=PAY-${Date.now()}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' }
+            });
+            
+            if (!confirmRes.ok) {
+                const errorText = await confirmRes.text();
+                throw new Error('Failed to confirm booking: ' + confirmRes.status + ' - ' + errorText);
+            }
+            const confirmedBooking = await confirmRes.json();
+            
+            return confirmedBooking.bookingNumber || 'TICKET-XXXXXX';
+        } catch (e) {
+            console.error('Booking error:', e);
+            alert('Booking failed: ' + e.message);
+            throw e; // Re-throw to prevent showing false success
+        }
+    }
+    document.addEventListener('DOMContentLoaded', () => {
+        const order = renderOrder();
+        document.getElementById('payBtn').onclick = async () => {
+            const ticketId = await confirmBooking(order);
+            const msg = `Payment successful. Your Ticket ID: ${ticketId}`;
+            const el = document.getElementById('confirmation');
+            el.textContent = msg;
+            el.classList.remove('d-none');
+            // Persist booking state & clear cart
+            localStorage.removeItem('cartItems');
+            localStorage.removeItem('selectedSeats');
+        };
+    });
+</script>
+</body>
+</html>

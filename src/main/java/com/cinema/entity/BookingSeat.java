@@ -7,10 +7,12 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 @Entity
 @Table(name = "booking_seats")
 @Data
+@ToString(exclude = {"booking", "seat", "ticketType"})
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -39,6 +41,19 @@ public class BookingSeat {
     @Column(name = "seat_status", nullable = false, length = 20)
     @Builder.Default
     private SeatStatus seatStatus = SeatStatus.RESERVED;
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        BookingSeat that = (BookingSeat) o;
+        return id != null && id.equals(that.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return id != null ? id.hashCode() : System.identityHashCode(this);
+    }
 
     public enum SeatStatus {
         RESERVED,

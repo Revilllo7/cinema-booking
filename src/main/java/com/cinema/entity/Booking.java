@@ -7,6 +7,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
@@ -19,6 +20,7 @@ import java.util.UUID;
 @Entity
 @Table(name = "bookings")
 @Data
+@ToString(exclude = {"user", "screening", "bookingSeats"})
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -72,6 +74,19 @@ public class Booking {
     @LastModifiedDate
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Booking booking = (Booking) o;
+        return id != null && id.equals(booking.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return id != null ? id.hashCode() : System.identityHashCode(this);
+    }
 
     public enum BookingStatus {
         PENDING,

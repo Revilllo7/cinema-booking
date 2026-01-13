@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head}"></head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+<main class="container my-5">
+    <h1 class="mb-4">Screenings</h1>
+    <div id="screeningsContainer" class="row g-3"></div>
+</main>
+<div th:replace="~{fragments/footer :: footer}"></div>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        fetch('/api/v1/screenings?page=0&size=12')
+            .then(r => r.json())
+            .then(data => {
+                const container = document.getElementById('screeningsContainer');
+                if (data.content && data.content.length) {
+                    container.innerHTML = data.content.map(s => `
+                        <div class="col-md-4">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h5 class="card-title">${s.movieTitle || 'Movie'}</h5>
+                                    <p class="card-text text-muted"><small>${s.startTime || s.dateTime}</small></p>
+                                    <a href="/seat-selection?screeningId=${s.id}" class="btn btn-cinema btn-sm">Select Seats</a>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    container.innerHTML = '<div class="col-12"><p class="text-muted">No screenings available.</p></div>';
+                }
+            })
+            .catch(() => {
+                document.getElementById('screeningsContainer').innerHTML = '<div class="col-12"><p class="text-danger">Failed to load screenings.</p></div>';
+            });
+    });
+</script>
+</body>
+</html>

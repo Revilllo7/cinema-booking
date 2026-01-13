@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments/head :: head}"></head>
+<body>
+    <div th:replace="~{fragments/navbar :: navbar}"></div>
+    
+    <main class="container my-5">
+        <div class="row">
+            <div class="col-lg-10 mx-auto">
+                <!-- Page Header -->
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2><i class="bi bi-ticket-perforated"></i> My Bookings</h2>
+                    <a href="/profile" th:href="@{/profile}" class="btn btn-outline-secondary">
+                        <i class="bi bi-person-circle"></i> Back to Profile
+                    </a>
+                </div>
+                
+                <!-- User Info Summary -->
+                <div class="alert alert-info d-flex align-items-center mb-4">
+                    <i class="bi bi-info-circle fs-4 me-3"></i>
+                    <div>
+                        <strong>Welcome, <span th:text="${user.username}">User</span>!</strong><br>
+                        <span class="small">Here you can view all your cinema bookings and reservations.</span>
+                    </div>
+                </div>
+                
+                <!-- Bookings List -->
+                <div th:if="${bookings.isEmpty()}" class="card text-center py-5">
+                    <div class="card-body">
+                        <i class="bi bi-ticket-perforated-fill fs-1 text-muted"></i>
+                        <h4 class="mt-3 text-muted">No bookings yet</h4>
+                        <p class="text-muted">You haven't made any bookings. Start by browsing our movies!</p>
+                        <a href="/movies" th:href="@{/movies}" class="btn btn-primary mt-3">
+                            <i class="bi bi-film"></i> Browse Movies
+                        </a>
+                    </div>
+                </div>
+                
+                <div th:if="${!bookings.isEmpty()}">
+                    <!-- Bookings Table -->
+                    <div class="card shadow">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0">
+                                <i class="bi bi-list-ul"></i> Booking History 
+                                <span class="badge bg-light text-dark ms-2" th:text="${bookings.totalElements}">0</span>
+                            </h5>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Booking #</th>
+                                            <th>Screening</th>
+                                            <th>Seats</th>
+                                            <th>Total Price</th>
+                                            <th>Status</th>
+                                            <th>Booked On</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr th:each="booking : ${bookings.content}">
+                                            <td>
+                                                <strong th:text="${booking.bookingNumber}">BKG-001</strong>
+                                            </td>
+                                            <td>
+                                                <div>
+                                                    <div class="d-flex align-items-center">
+                                                        <div>
+                                                            <strong>Screening</strong><br>
+                                                            <small class="text-muted">ID: <span th:text="${booking.screeningId}">0</span></small>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div th:if="${booking.seats}" class="small">
+                                                    <span class="badge bg-secondary me-1" th:each="seat : ${booking.seats}">
+                                                        <i class="bi bi-ui-radios-grid"></i>
+                                                        <span th:text="${seat.rowNumber} ?: 'R'">R</span>-<span th:text="${seat.seatNumber} ?: 'S'">S</span>
+                                                    </span>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <strong th:text="${booking.totalPrice != null ? '$' + booking.totalPrice : 'N/A'}">$0.00</strong>
+                                            </td>
+                                            <td>
+                                                <span th:if="${booking.status == 'CONFIRMED'}" 
+                                                      class="badge bg-success booking-status-badge">
+                                                    <i class="bi bi-check-circle"></i> Confirmed
+                                                </span>
+                                                <span th:if="${booking.status == 'PENDING'}" 
+                                                      class="badge bg-warning text-dark booking-status-badge">
+                                                    <i class="bi bi-clock"></i> Pending Payment
+                                                </span>
+                                                <span th:if="${booking.status == 'CANCELLED'}" 
+                                                      class="badge bg-danger booking-status-badge">
+                                                    <i class="bi bi-x-circle"></i> Cancelled
+                                                </span>
+                                                <span th:if="${booking.status == 'EXPIRED'}" 
+                                                      class="badge bg-secondary booking-status-badge">
+                                                    <i class="bi bi-hourglass-split"></i> Expired
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <small th:text="${booking.createdAt != null ? #temporals.format(booking.createdAt, 'dd MMM yyyy') : 'N/A'}">
+                                                    Date
+                                                </small>
+                                            </td>
+                                            <td>
+                                                <div class="payment-actions">
+                                                    <!-- View Details Button -->
+                                                    <button class="btn btn-sm btn-outline-info mb-1"
+                                                            title="View details"
+                                                            th:attr="data-booking-number=${booking.bookingNumber},
+                                                                     data-booking-status=${booking.status},
+                                                                     data-booking-total=${booking.totalPrice},
+                                                                     data-booking-created=${booking.createdAt},
+                                                                     data-booking-seats=${#strings.listJoin(booking.seats.?[true].![rowNumber + '-' + seatNumber], ', ')}"
+                                                            onclick="showBooking(this)">
+                                                        <i class="bi bi-eye"></i> View
+                                                    </button>
+                                                    
+                                                    <!-- Pay Now Button for Pending Bookings -->
+                                                    <button th:if="${booking.status == 'PENDING'}"
+                                                            class="btn btn-sm btn-cinema mb-1"
+                                                            onclick="simulatePayment(this)"
+                                                            th:attr="data-booking-id=${booking.id},data-booking-number=${booking.bookingNumber}"
+                                                            title="Complete payment">
+                                                        <i class="bi bi-credit-card"></i> Pay Now
+                                                    </button>
+                                                    
+                                                    <!-- Cancel Button for Pending/Confirmed Bookings -->
+                                                    <button th:if="${booking.status == 'PENDING' or booking.status == 'CONFIRMED'}"
+                                                            class="btn btn-sm btn-outline-danger mb-1"
+                                                            onclick="cancelBooking(this)"
+                                                            th:attr="data-booking-id=${booking.id}"
+                                                            title="Cancel booking">
+                                                        <i class="bi bi-trash"></i> Cancel
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Pagination -->
+                    <nav th:if="${bookings.totalPages > 1}" class="mt-4" aria-label="Bookings pagination">
+                        <ul class="pagination justify-content-center">
+                            <!-- Previous Button -->
+                            <li class="page-item" th:classappend="${bookings.first} ? 'disabled'">
+                                <a class="page-link" 
+                                   th:href="@{/profile/bookings(page=${bookings.number - 1}, size=${bookings.size})}"
+                                   th:if="${!bookings.first}">
+                                    <i class="bi bi-chevron-left"></i> Previous
+                                </a>
+                                <span class="page-link" th:if="${bookings.first}">
+                                    <i class="bi bi-chevron-left"></i> Previous
+                                </span>
+                            </li>
+                            
+                            <!-- Page Numbers -->
+                            <li class="page-item" 
+                                th:each="i : ${#numbers.sequence(0, bookings.totalPages - 1)}"
+                                th:classappend="${i == bookings.number} ? 'active'">
+                                <a class="page-link" 
+                                   th:href="@{/profile/bookings(page=${i}, size=${bookings.size})}"
+                                   th:text="${i + 1}">1</a>
+                            </li>
+                            
+                            <!-- Next Button -->
+                            <li class="page-item" th:classappend="${bookings.last} ? 'disabled'">
+                                <a class="page-link" 
+                                   th:href="@{/profile/bookings(page=${bookings.number + 1}, size=${bookings.size})}"
+                                   th:if="${!bookings.last}">
+                                    Next <i class="bi bi-chevron-right"></i>
+                                </a>
+                                <span class="page-link" th:if="${bookings.last}">
+                                    Next <i class="bi bi-chevron-right"></i>
+                                </span>
+                            </li>
+                        </ul>
+                    </nav>
+                    
+                    <!-- Summary -->
+                    <div class="text-center text-muted mt-3">
+                        <small>
+                            Showing <span th:text="${bookings.numberOfElements}">0</span> 
+                            of <span th:text="${bookings.totalElements}">0</span> bookings
+                            (Page <span th:text="${bookings.number + 1}">1</span> 
+                            of <span th:text="${bookings.totalPages}">1</span>)
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+    
+    <div th:replace="~{fragments/footer :: footer}"></div>
+    
+    <script>
+        function simulatePayment(button) {
+            const bookingId = button.getAttribute('data-booking-id');
+            const bookingNumber = button.getAttribute('data-booking-number');
+            
+            if (!confirm(`Simulate payment for booking ${bookingNumber}?\n\nThis will mark the booking as CONFIRMED.`)) {
+                return;
+            }
+            
+            button.disabled = true;
+            button.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Processing...';
+            
+            // Use the /confirm endpoint with proper parameters
+            fetch(`/api/v1/bookings/${bookingId}/confirm?paymentMethod=CREDIT_CARD&paymentReference=PAY-${Date.now()}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => {
+                if (response.ok) {
+                    return response.json();
+                } else {
+                    throw new Error('Payment failed');
+                }
+            })
+            .then(data => {
+                alert('Payment successful! Your booking is now confirmed.');
+                // Redirect to bookings page
+                window.location.href = '/profile/bookings';
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Payment failed. Please try again.');
+                button.disabled = false;
+                button.innerHTML = '<i class="bi bi-credit-card"></i> Pay Now';
+            });
+        }
+        
+        function cancelBooking(button) {
+            const bookingId = button.getAttribute('data-booking-id');
+            
+            if (!confirm('Are you sure you want to cancel this booking? This action cannot be undone.')) {
+                return;
+            }
+            
+            button.disabled = true;
+            button.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Cancelling...';
+            
+            fetch(`/api/v1/bookings/${bookingId}/cancel?reason=User%20requested`, {
+                method: 'PUT'
+            })
+            .then(response => {
+                if (response.ok) {
+                    return response.json();
+                } else {
+                    throw new Error('Cancellation failed');
+                }
+            })
+            .then(data => {
+                alert('Booking cancelled successfully.');
+                // Redirect to bookings page
+                window.location.href = '/profile/bookings';
+            })
+
+        function showBooking(btn) {
+            const number = btn.getAttribute('data-booking-number') || 'N/A';
+            const status = btn.getAttribute('data-booking-status') || 'N/A';
+            const total = btn.getAttribute('data-booking-total') || '0';
+            const created = btn.getAttribute('data-booking-created') || '';
+            const seats = btn.getAttribute('data-booking-seats') || '';
+            const modalBody = document.getElementById('bookingModalBody');
+            modalBody.innerHTML = `
+                <p><strong>Booking #:</strong> ${number}</p>
+                <p><strong>Status:</strong> ${status}</p>
+                <p><strong>Total:</strong> $${parseFloat(total).toFixed(2)}</p>
+                <p><strong>Booked On:</strong> ${created ? new Date(created).toLocaleString() : 'N/A'}</p>
+                <p><strong>Seats:</strong> ${seats || 'N/A'}</p>
+            `;
+            const modal = new bootstrap.Modal(document.getElementById('bookingModal'));
+            modal.show();
+        }
+            .catch(error => {
+
+    <!-- Booking Details Modal -->
+    <div class="modal fade" id="bookingModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Booking Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="bookingModalBody"></div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+                console.error('Error:', error);
+                alert('Failed to cancel booking. Please try again.');
+                button.disabled = false;
+                button.innerHTML = '<i class="bi bi-trash"></i> Cancel';
+            });
+        }
+    </script>
+</body>
+</html>

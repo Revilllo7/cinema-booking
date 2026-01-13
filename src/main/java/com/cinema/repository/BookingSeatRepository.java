@@ -19,4 +19,7 @@ public interface BookingSeatRepository extends JpaRepository<BookingSeat, Long> 
 
     @Query("SELECT bs FROM BookingSeat bs WHERE bs.booking.screening.id = :screeningId AND bs.seatStatus = 'OCCUPIED'")
     List<BookingSeat> findOccupiedSeatsByScreeningId(@Param("screeningId") Long screeningId);
+
+    @Query("SELECT bs FROM BookingSeat bs WHERE bs.booking.screening.id = :screeningId AND bs.booking.status <> 'CANCELLED'")
+    List<BookingSeat> findActiveSeatsByScreeningId(@Param("screeningId") Long screeningId);
 }

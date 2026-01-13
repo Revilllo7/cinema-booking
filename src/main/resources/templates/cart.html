@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head}"></head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+<main class="container my-5">
+    <h1 class="mb-4">Your Cart</h1>
+    <div class="row">
+        <div class="col-lg-8">
+            <table class="table align-middle">
+                <thead>
+                    <tr>
+                        <th>Seat</th>
+                        <th>Ticket Type</th>
+                        <th class="text-end">Price</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="cartBody"></tbody>
+            </table>
+        </div>
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5>Summary</h5>
+                    <p class="d-flex justify-content-between"><span>Items</span><span id="itemCount">0</span></p>
+                    <p class="d-flex justify-content-between"><span>Total</span><strong id="totalPrice">0.00</strong></p>
+                    <div class="d-grid gap-2">
+                        <a class="btn btn-cinema" href="/checkout">Proceed to Checkout</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+<div th:replace="~{fragments/footer :: footer}"></div>
+<script>
+    const PRICES = { Normal: 30.0, Ulgowy: 22.0, Rodzinny: 20.0 };
+    const cartKey = 'cartItems';
+    const screeningId = localStorage.getItem('currentScreeningId');
+
+    function loadCart() {
+        const seats = JSON.parse(localStorage.getItem('selectedSeats') || '[]');
+        const items = JSON.parse(localStorage.getItem(cartKey) || '[]');
+        const map = new Map(items.map(i => [i.seat, i]));
+        seats.forEach(s => { if (!map.has(s)) map.set(s, { seat: s, type: 'Normal' }); });
+        const normalized = Array.from(map.values());
+        localStorage.setItem(cartKey, JSON.stringify(normalized));
+        return normalized;
+    }
+
+    function renderCart() {
+        const items = loadCart();
+        const body = document.getElementById('cartBody');
+        body.innerHTML = items.length ? items.map(i => `
+            <tr>
+                <td>${i.seat}</td>
+                <td>
+                    <select class="form-select form-select-sm" onchange="updateType('${i.seat}', this.value)">
+                        <option ${i.type==='Normal'?'selected':''}>Normal</option>
+                        <option ${i.type==='Ulgowy'?'selected':''}>Ulgowy</option>
+                        <option ${i.type==='Rodzinny'?'selected':''}>Rodzinny</option>
+                    </select>
+                </td>
+                <td class="text-end">${PRICES[i.type].toFixed(2)}</td>
+                <td class="text-end">
+                    <button class="btn btn-sm btn-outline-danger" onclick="removeItem('${i.seat}')">Remove</button>
+                </td>
+            </tr>
+        `).join('') : '<tr><td colspan="4" class="text-muted">No items in cart</td></tr>';
+        document.getElementById('itemCount').textContent = items.length;
+        const total = items.reduce((sum, i) => sum + PRICES[i.type], 0);
+        document.getElementById('totalPrice').textContent = total.toFixed(2);
+    }
+
+    function updateType(seat, type) {
+        const items = JSON.parse(localStorage.getItem(cartKey) || '[]');
+        items.forEach(i => { if (i.seat === seat) i.type = type; });
+        localStorage.setItem(cartKey, JSON.stringify(items));
+        renderCart();
+    }
+
+    function removeItem(seat) {
+        let items = JSON.parse(localStorage.getItem(cartKey) || '[]');
+        items = items.filter(i => i.seat !== seat);
+        localStorage.setItem(cartKey, JSON.stringify(items));
+        let seats = JSON.parse(localStorage.getItem('selectedSeats') || '[]');
+        seats = seats.filter(s => s !== seat);
+        localStorage.setItem('selectedSeats', JSON.stringify(seats));
+        renderCart();
+    }
+
+    document.addEventListener('DOMContentLoaded', renderCart);
+</script>
+</body>
+</html>

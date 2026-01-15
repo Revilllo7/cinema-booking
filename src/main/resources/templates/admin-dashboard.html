@@ -150,7 +150,7 @@
                                 </a>
                             </div>
                             <div class="col-md-3 mb-2">
-                                <a href="/profile/bookings" th:href="@{/profile/bookings}" class="btn btn-outline-primary w-100">
+                                <a href="/admin/bookings" th:href="@{/admin/bookings}" class="btn btn-outline-primary w-100">
                                     <i class="bi bi-ticket"></i> View Bookings
                                 </a>
                             </div>
@@ -186,12 +186,12 @@
                 })
                 .catch(() => document.getElementById('activeScreenings').textContent = 'N/A');
 
-            // Fetch total bookings (admin endpoint)
-            fetch('/api/v1/admin/bookings?page=0&size=1')
+            // Fetch total bookings (admin summary endpoint)
+            fetch('/api/v1/admin/bookings/summary')
                 .then(response => response.json())
                 .then(data => {
-                    if (data.totalElements !== undefined) {
-                        document.getElementById('totalBookings').textContent = data.totalElements;
+                    if (data.totalBookings !== undefined) {
+                        document.getElementById('totalBookings').textContent = data.totalBookings;
                     }
                 })
                 .catch(() => document.getElementById('totalBookings').textContent = 'N/A');

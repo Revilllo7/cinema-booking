@@ -20,7 +20,7 @@
     <div class="card mb-4">
         <div class="card-body">
             <div class="row align-items-end">
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <label class="form-label">Month</label>
                     <select id="monthSelect" class="form-select">
                         <option value="1">January</option>
@@ -37,18 +37,23 @@
                         <option value="12">December</option>
                     </select>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <label class="form-label">Year</label>
                     <input type="number" id="yearInput" class="form-control" min="2020" max="2030">
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <button class="btn btn-cinema w-100" onclick="loadStats()">
                         <i class="bi bi-search"></i> Load Statistics
                     </button>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <button class="btn btn-outline-secondary w-100" onclick="loadCurrentMonth()">
                         <i class="bi bi-calendar-today"></i> Current Month
+                    </button>
+                </div>
+                <div class="col-md-2">
+                    <button class="btn btn-outline-info w-100" id="currentYearBtn" onclick="loadCurrentYear()">
+                        <i class="bi bi-calendar2-year"></i> Current Year
                     </button>
                 </div>
             </div>
@@ -158,6 +163,66 @@
             
             const data = await res.json();
             
+            // Update month and year inputs
+            const now = new Date();
+            document.getElementById('monthSelect').value = (now.getMonth() + 1).toString();
+            document.getElementById('yearInput').value = now.getFullYear();
+            
+            renderData(data);
+        } catch (e) {
+            console.error('Error loading current month stats:', e);
+            alert('Failed to load current month statistics. Using demo data.');
+            // Fallback demo data for current month
+            const today = new Date();
+            const fmt = d => d.toISOString().slice(0,10);
+            const demoData = Array.from({length:7}, (_,i)=>{
+                const d = new Date(today); d.setDate(d.getDate()-i);
+                return { 
+                    date: fmt(d), 
+                    ticketsSold: Math.floor(Math.random()*50)+10, 
+                    totalRevenue: Math.floor(Math.random()*2000)+500 
+                };
+            }).reverse();
+            renderData(demoData);
+        }
+    }
+
+    async function loadCurrentYear() {
+        try {
+            const currentYear = new Date().getFullYear();
+            document.getElementById('yearInput').value = currentYear;
+            
+            // Fetch all months for the current year
+            const res = await fetch(`/api/v1/admin/stats/sales?year=${currentYear}`);
+            
+            if (!res.ok) {
+                throw new Error('Failed to fetch current year statistics');
+            }
+            
+            const data = await res.json();
+            renderData(data);
+        } catch (e) {
+            console.error('Error loading current year stats:', e);
+            alert('Failed to load current year statistics. Using demo data.');
+            // Fallback demo data for the year
+            const today = new Date();
+            const fmt = d => d.toISOString().slice(0,10);
+            const demoData = Array.from({length:365}, (_,i)=>{
+                const d = new Date(today); d.setDate(d.getDate()-i);
+                if (d.getMonth() !== today.getMonth()) return null;
+                return { 
+                    date: fmt(d), 
+                    ticketsSold: Math.floor(Math.random()*50)+10, 
+                    totalRevenue: Math.floor(Math.random()*2000)+500 
+                };
+            }).filter(x=>x).reverse();
+            renderData(demoData);
+        }
+    }
+    async function loadCurrentMonth() {
+        try {
+            const res = await fetch('/api/v1/admin/stats/sales/current-month');
+            const data = await res.json();
             // Update month and year selects
             const now = new Date();
             document.getElementById('monthSelect').value = (now.getMonth() + 1).toString();

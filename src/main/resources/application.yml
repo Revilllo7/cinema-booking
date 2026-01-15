@@ -26,7 +26,7 @@ spring:
     defer-datasource-initialization: true
   sql:
     init:
-      mode: always
+      mode: never
   session:
     store-type: jdbc
     jdbc:
@@ -54,7 +54,7 @@ app:
       - webp
     min-movie-images: 3
   seating:
-    lock-duration-minutes: 1
+    lock-duration-minutes: 10
     cleanup-interval-ms: 60000
 
 ---
@@ -76,3 +76,18 @@ spring:
   h2:
     console:
       enabled: false
+
+---
+spring:
+  config:
+    activate:
+      on-profile: demo-data
+  sql:
+    init:
+      mode: always
+  jpa:
+    defer-datasource-initialization: true
+
+app:
+  bootstrap:
+    enabled: true

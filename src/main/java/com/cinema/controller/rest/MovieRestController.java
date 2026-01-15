@@ -18,6 +18,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -40,12 +41,14 @@ public class MovieRestController {
             @Parameter(description = "Page number (0-indexed)") @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "Page size") @RequestParam(defaultValue = "10") int size,
             @Parameter(description = "Sort field") @RequestParam(defaultValue = "createdAt") String sortBy,
-            @Parameter(description = "Sort direction") @RequestParam(defaultValue = "DESC") Sort.Direction direction) {
+            @Parameter(description = "Sort direction") @RequestParam(defaultValue = "DESC") Sort.Direction direction,
+            @Parameter(description = "Search by title") @RequestParam(required = false) String search,
+            @Parameter(description = "Filter by genre") @RequestParam(required = false) String genre) {
         
-        log.info("GET /api/v1/movies - page: {}, size: {}, sortBy: {}", page, size, sortBy);
+        log.info("GET /api/v1/movies - page: {}, size: {}, sortBy: {}, search: {}, genre: {}", page, size, sortBy, search, genre);
         
         Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortBy));
-        Page<MovieDTO> movies = movieService.getAllActiveMovies(pageable);
+        Page<MovieDTO> movies = movieService.getAllActiveMovies(pageable, search, genre);
         
         return ResponseEntity.ok(movies);
     }
@@ -151,5 +154,16 @@ public class MovieRestController {
         
         movieService.deleteMovie(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary = "Upload/replace poster", description = "Upload a new primary poster for a movie (Admin only)")
+    @PostMapping(value = "/{id}/poster", consumes = {"multipart/form-data"})
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<MovieDTO> uploadPoster(
+            @Parameter(description = "Movie ID") @PathVariable Long id,
+            @RequestParam("file") MultipartFile file) {
+        log.info("POST /api/v1/movies/{}/poster - uploading poster", id);
+        MovieDTO updated = movieService.updatePoster(id, file);
+        return ResponseEntity.ok(updated);
     }
 }

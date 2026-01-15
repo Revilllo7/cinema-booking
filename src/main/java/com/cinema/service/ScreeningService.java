@@ -36,6 +36,26 @@ public class ScreeningService {
     }
 
     @Transactional(readOnly = true)
+    public Page<ScreeningDTO> getAllActiveScreenings(Pageable pageable, Long movieId, String startDate, String endDate) {
+        log.debug("Fetching screenings with pagination: {}, movieId: {}, startDate: {}, endDate: {}", pageable, movieId, startDate, endDate);
+        
+        LocalDateTime start = startDate != null && !startDate.isBlank() ? 
+            LocalDateTime.parse(startDate.contains("T") ? startDate : startDate + "T00:00:00") : 
+            LocalDateTime.now();
+        LocalDateTime end = endDate != null && !endDate.isBlank() ? 
+            LocalDateTime.parse(endDate.contains("T") ? endDate : endDate + "T23:59:59") : 
+            LocalDateTime.now().plusDays(365);
+        
+        if (movieId != null && movieId > 0) {
+            return screeningRepository.findByActiveTrueAndMovieIdAndStartTimeBetween(movieId, start, end, pageable)
+                .map(this::convertToDto);
+        } else {
+            return screeningRepository.findByActiveTrueAndStartTimeBetween(start, end, pageable)
+                .map(this::convertToDto);
+        }
+    }
+
+    @Transactional(readOnly = true)
     public Page<ScreeningDTO> getUpcomingScreenings(LocalDateTime from, Pageable pageable) {
         log.debug("Fetching upcoming screenings from: {}", from);
         return screeningRepository.findUpcomingScreenings(from, pageable)
@@ -90,14 +110,19 @@ public class ScreeningService {
         Hall hall = hallRepository.findById(screeningDTO.getHallId())
             .orElseThrow(() -> new ResourceNotFoundException("Hall", "id", screeningDTO.getHallId()));
 
-        // Validate time range
-        if (screeningDTO.getStartTime().isAfter(screeningDTO.getEndTime())) {
-            throw new IllegalArgumentException("Start time must be before end time");
-        }
+        LocalDateTime startTime = screeningDTO.getStartTime();
+        LocalDateTime endTime = resolveEndTime(screeningDTO, movie);
+
+        validateTimeRange(startTime, endTime);
+        assertNoConflicts(hall.getId(), null, startTime, endTime);
+
+        screeningDTO.setEndTime(endTime);
 
         Screening screening = convertToEntity(screeningDTO);
         screening.setMovie(movie);
         screening.setHall(hall);
+        screening.setStartTime(startTime);
+        screening.setEndTime(endTime);
         screening.setActive(true);
 
         Screening savedScreening = screeningRepository.save(screening);
@@ -113,20 +138,27 @@ public class ScreeningService {
         Screening existingScreening = screeningRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Screening", "id", id));
 
-        // Validate movie exists if changed
+        Movie targetMovie = existingScreening.getMovie();
         if (!existingScreening.getMovie().getId().equals(screeningDTO.getMovieId())) {
-            Movie movie = movieRepository.findById(screeningDTO.getMovieId())
+            targetMovie = movieRepository.findById(screeningDTO.getMovieId())
                 .orElseThrow(() -> new ResourceNotFoundException("Movie", "id", screeningDTO.getMovieId()));
-            existingScreening.setMovie(movie);
+            existingScreening.setMovie(targetMovie);
         }
 
-        // Validate hall exists if changed
+        Hall targetHall = existingScreening.getHall();
         if (!existingScreening.getHall().getId().equals(screeningDTO.getHallId())) {
-            Hall hall = hallRepository.findById(screeningDTO.getHallId())
+            targetHall = hallRepository.findById(screeningDTO.getHallId())
                 .orElseThrow(() -> new ResourceNotFoundException("Hall", "id", screeningDTO.getHallId()));
-            existingScreening.setHall(hall);
+            existingScreening.setHall(targetHall);
         }
 
+        LocalDateTime startTime = screeningDTO.getStartTime();
+        LocalDateTime endTime = resolveEndTime(screeningDTO, targetMovie);
+
+        validateTimeRange(startTime, endTime);
+        assertNoConflicts(targetHall.getId(), existingScreening.getId(), startTime, endTime);
+
+        screeningDTO.setEndTime(endTime);
         updateEntityFromDto(existingScreening, screeningDTO);
 
         Screening updatedScreening = screeningRepository.save(existingScreening);
@@ -161,6 +193,7 @@ public class ScreeningService {
             .id(screening.getId())
             .movieId(screening.getMovie().getId())
             .movieTitle(screening.getMovie().getTitle())
+            .moviePosterPath(screening.getMovie().getPosterPath())
             .hallId(screening.getHall().getId())
             .hallName(screening.getHall().getName())
             .startTime(screening.getStartTime())
@@ -191,6 +224,36 @@ public class ScreeningService {
         screening.setBasePrice(dto.getBasePrice());
         if (dto.getActive() != null) {
             screening.setActive(dto.getActive());
+        }
+    }
+
+    private LocalDateTime resolveEndTime(ScreeningDTO dto, Movie movie) {
+        if (dto.getEndTime() != null) {
+            return dto.getEndTime();
+        }
+        if (dto.getStartTime() == null) {
+            throw new IllegalArgumentException("Start time is required");
+        }
+        if (movie.getDurationMinutes() == null) {
+            throw new IllegalStateException("Movie duration is required to calculate end time");
+        }
+        return dto.getStartTime().plusMinutes(movie.getDurationMinutes());
+    }
+
+    private void validateTimeRange(LocalDateTime start, LocalDateTime end) {
+        if (start == null || end == null) {
+            throw new IllegalArgumentException("Start and end time are required");
+        }
+        if (!end.isAfter(start)) {
+            throw new IllegalArgumentException("Start time must be before end time");
+        }
+    }
+
+    private void assertNoConflicts(Long hallId, Long screeningId, LocalDateTime start, LocalDateTime end) {
+        Long exclusionId = screeningId != null ? screeningId : -1L;
+        boolean conflict = screeningRepository.existsConflictingScreening(hallId, exclusionId, start, end);
+        if (conflict) {
+            throw new IllegalStateException("Screening overlaps with another screening in the same hall");
         }
     }
 }

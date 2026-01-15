@@ -21,7 +21,7 @@ public class ReportingDao {
      */
     public BigDecimal totalRevenueBetween(LocalDateTime start, LocalDateTime end) {
         String sql = "SELECT COALESCE(SUM(total_price), 0) FROM bookings " +
-                     "WHERE status = 'CONFIRMED' AND created_at BETWEEN ? AND ?";
+                 "WHERE status IN ('CONFIRMED', 'COMPLETED') AND created_at BETWEEN ? AND ?";
         BigDecimal result = jdbcTemplate.queryForObject(
                 sql,
                 BigDecimal.class,
@@ -36,8 +36,8 @@ public class ReportingDao {
      */
     public int ticketsSoldBetween(LocalDateTime start, LocalDateTime end) {
         String sql = "SELECT COALESCE(COUNT(bs.id), 0) FROM booking_seats bs " +
-                     "JOIN bookings b ON b.id = bs.booking_id " +
-                     "WHERE b.status = 'CONFIRMED' AND b.created_at BETWEEN ? AND ?";
+                 "JOIN bookings b ON b.id = bs.booking_id " +
+                 "WHERE b.status IN ('CONFIRMED', 'COMPLETED') AND b.created_at BETWEEN ? AND ?";
         Integer result = jdbcTemplate.queryForObject(
                 sql,
                 Integer.class,
@@ -52,8 +52,8 @@ public class ReportingDao {
      */
     public BigDecimal revenueByMovie(Long movieId, LocalDateTime start, LocalDateTime end) {
         String sql = "SELECT COALESCE(SUM(b.total_price), 0) FROM bookings b " +
-                     "JOIN screenings s ON s.id = b.screening_id " +
-                     "WHERE b.status = 'CONFIRMED' AND s.movie_id = ? AND b.created_at BETWEEN ? AND ?";
+                 "JOIN screenings s ON s.id = b.screening_id " +
+                 "WHERE b.status IN ('CONFIRMED', 'COMPLETED') AND s.movie_id = ? AND b.created_at BETWEEN ? AND ?";
         BigDecimal result = jdbcTemplate.queryForObject(
                 sql,
                 BigDecimal.class,
@@ -69,8 +69,8 @@ public class ReportingDao {
      */
     public int seatsBookedForScreening(Long screeningId) {
         String sql = "SELECT COALESCE(COUNT(bs.id), 0) FROM booking_seats bs " +
-                     "JOIN bookings b ON b.id = bs.booking_id " +
-                     "WHERE b.screening_id = ? AND b.status = 'CONFIRMED'";
+                 "JOIN bookings b ON b.id = bs.booking_id " +
+                 "WHERE b.screening_id = ? AND b.status IN ('CONFIRMED', 'COMPLETED')";
         Integer result = jdbcTemplate.queryForObject(sql, Integer.class, screeningId);
         return result != null ? result : 0;
     }

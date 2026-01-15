@@ -5,14 +5,15 @@ import com.cinema.entity.Movie;
 import com.cinema.entity.MovieImage;
 import com.cinema.exception.ResourceNotFoundException;
 import com.cinema.repository.MovieRepository;
-// import com.cinema.repository.MovieImageRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -22,13 +23,36 @@ import java.util.stream.Collectors;
 public class MovieService {
 
     private final MovieRepository movieRepository;
-    // private final MovieImageRepository movieImageRepository;
+    private final MediaStorageService mediaStorageService;
 
     @Transactional(readOnly = true)
     public Page<MovieDTO> getAllActiveMovies(Pageable pageable) {
         log.debug("Fetching all active movies with pagination: {}", pageable);
         return movieRepository.findByActiveTrueOrderByCreatedAtDesc(pageable)
             .map(this::convertToDto);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<MovieDTO> getAllActiveMovies(Pageable pageable, String search, String genre) {
+        log.debug("Fetching active movies with pagination: {}, search: {}, genre: {}", pageable, search, genre);
+        
+        Page<Movie> movies;
+        
+        if (search != null && !search.isBlank() && genre != null && !genre.isBlank()) {
+            // Both search and genre
+            movies = movieRepository.findByActiveTrueAndTitleContainingIgnoreCaseAndGenreContainingIgnoreCase(search, genre, pageable);
+        } else if (search != null && !search.isBlank()) {
+            // Search only
+            movies = movieRepository.findByActiveTrueAndTitleContainingIgnoreCase(search, pageable);
+        } else if (genre != null && !genre.isBlank()) {
+            // Genre only
+            movies = movieRepository.findByActiveTrueAndGenreContainingIgnoreCase(genre, pageable);
+        } else {
+            // No filters
+            movies = movieRepository.findByActiveTrueOrderByCreatedAtDesc(pageable);
+        }
+        
+        return movies.map(this::convertToDto);
     }
 
     @Transactional(readOnly = true)
@@ -100,8 +124,23 @@ public class MovieService {
         log.info("Movie deactivated successfully: {}", id);
     }
 
+    @Transactional
+    public MovieDTO updatePoster(Long movieId, MultipartFile file) {
+        log.info("Updating poster for movie {}", movieId);
+        Movie movie = movieRepository.findById(movieId)
+            .orElseThrow(() -> new ResourceNotFoundException("Movie", "id", movieId));
+
+        String posterPath = mediaStorageService.storeMoviePoster(movieId, file);
+        movie.setPosterPath(posterPath);
+        Movie saved = movieRepository.save(movie);
+        log.info("Poster updated for movie {}", movieId);
+        return convertToDto(saved);
+    }
+
     // Mapping methods
     private MovieDTO convertToDto(Movie movie) {
+        List<String> gallery = resolveImagePaths(movie);
+
         return MovieDTO.builder()
             .id(movie.getId())
             .title(movie.getTitle())
@@ -117,10 +156,21 @@ public class MovieService {
             .active(movie.getActive())
             .createdAt(movie.getCreatedAt())
             .updatedAt(movie.getUpdatedAt())
-            .imagePaths(movie.getImages().stream()
-                .map(MovieImage::getImagePath)
-                .collect(Collectors.toSet()))
+            .imagePaths(gallery)
             .build();
+    }
+
+    private List<String> resolveImagePaths(Movie movie) {
+        if (movie.getImages() != null && !movie.getImages().isEmpty()) {
+            return movie.getImages().stream()
+                .sorted(Comparator.comparingInt(img -> img.getDisplayOrder() != null ? img.getDisplayOrder() : 0))
+                .map(MovieImage::getImagePath)
+                .collect(Collectors.toList());
+        }
+        if (movie.getId() == null) {
+            return List.of();
+        }
+        return mediaStorageService.listMovieImages(movie.getId());
     }
 
     private Movie convertToEntity(MovieDTO dto) {

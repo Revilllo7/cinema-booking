@@ -29,6 +29,8 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     @Query("SELECT b FROM Booking b WHERE b.createdAt BETWEEN :startDate AND :endDate")
     List<Booking> findByCreatedAtBetween(@Param("startDate") LocalDateTime startDate, @Param("endDate") LocalDateTime endDate);
 
-    @Query("SELECT COUNT(b) FROM Booking b WHERE b.status = 'CONFIRMED' AND b.screening.id = :screeningId")
+    @Query("SELECT COUNT(b) FROM Booking b WHERE b.status IN ('CONFIRMED', 'COMPLETED') AND b.screening.id = :screeningId")
     Long countConfirmedBookingsByScreeningId(@Param("screeningId") Long screeningId);
+
+    long countByStatus(Booking.BookingStatus status);
 }

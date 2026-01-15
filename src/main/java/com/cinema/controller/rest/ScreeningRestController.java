@@ -47,12 +47,15 @@ public class ScreeningRestController {
             @Parameter(description = "Page number (0-indexed)") @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "Page size") @RequestParam(defaultValue = "10") int size,
             @Parameter(description = "Sort field") @RequestParam(defaultValue = "startTime") String sortBy,
-            @Parameter(description = "Sort direction") @RequestParam(defaultValue = "ASC") Sort.Direction direction) {
+            @Parameter(description = "Sort direction") @RequestParam(defaultValue = "ASC") Sort.Direction direction,
+            @Parameter(description = "Filter by movie ID") @RequestParam(required = false) Long movieId,
+            @Parameter(description = "Filter by start date") @RequestParam(required = false) String startDate,
+            @Parameter(description = "Filter by end date") @RequestParam(required = false) String endDate) {
         
-        log.info("GET /api/v1/screenings - page: {}, size: {}, sortBy: {}", page, size, sortBy);
+        log.info("GET /api/v1/screenings - page: {}, size: {}, sortBy: {}, movieId: {}, startDate: {}, endDate: {}", page, size, sortBy, movieId, startDate, endDate);
         
         Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortBy));
-        Page<ScreeningDTO> screenings = screeningService.getAllActiveScreenings(pageable);
+        Page<ScreeningDTO> screenings = screeningService.getAllActiveScreenings(pageable, movieId, startDate, endDate);
         
         return ResponseEntity.ok(screenings);
     }

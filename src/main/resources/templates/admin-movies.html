@@ -17,7 +17,7 @@
                     </ol>
                 </nav>
             </div>
-            <button class="btn btn-cinema" data-bs-toggle="modal" data-bs-target="#addMovieModal">
+            <button class="btn btn-cinema" data-bs-toggle="modal" data-bs-target="#addMovieModal" onclick="showBsModal('addMovieModal')">
                 <i class="bi bi-plus-circle"></i> Add New Movie
             </button>
         </div>
@@ -250,11 +250,95 @@
         </div>
     </div>
 
+    <!-- Gallery Modal -->
+    <div class="modal fade" id="galleryModal" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header bg-cinema-primary text-white">
+                    <h5 class="modal-title">
+                        <i class="bi bi-images"></i>
+                        Gallery · <span id="galleryMovieTitle">Movie</span>
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        Upload local JPG, PNG, or WEBP files (max 5 MB). Each movie must keep at least three gallery images.
+                    </div>
+                    <div class="row g-4 align-items-start">
+                        <div class="col-lg-8">
+                            <div id="galleryGrid" class="row g-3 mb-4">
+                                <div class="col-12 text-center py-4">
+                                    <div class="spinner-border" role="status"></div>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Add Images</label>
+                                <input type="file" id="galleryFiles" class="form-control" accept="image/*" multiple>
+                                <div class="form-text">Tip: select at least three stills to keep the gallery fresh.</div>
+                            </div>
+                            <div id="galleryError" class="alert alert-danger d-none"></div>
+                        </div>
+                        <div class="col-lg-4">
+                            <div class="card shadow-subtle poster-uploader-card h-100">
+                                <div class="card-body d-flex flex-column">
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <h6 class="mb-0">Primary Poster</h6>
+                                        <span class="badge bg-secondary text-uppercase">Cover</span>
+                                    </div>
+                                    <div class="poster-preview mb-3">
+                                        <img id="posterPreview" src="/images/placeholder.jpg" alt="Poster preview">
+                                    </div>
+                                    <div class="mb-3">
+                                        <input type="file" id="posterFile" class="form-control" accept="image/*">
+                                        <div class="form-text">Upload JPG/PNG/WEBP up to 3 MB. File is saved as movieId.ext.</div>
+                                    </div>
+                                    <div id="posterAlert" class="alert d-none" role="alert"></div>
+                                    <button type="button" class="btn btn-outline-cinema mt-auto" onclick="uploadPoster()">
+                                        <i class="bi bi-upload"></i> Update Poster
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button class="btn btn-cinema" onclick="uploadGalleryImages()">
+                        <i class="bi bi-upload"></i> Upload Selected
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div th:replace="~{fragments/footer :: footer}"></div>
+
+    <!-- Bootstrap JS Bundle (loaded before page scripts) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
         let currentPage = 0;
         const pageSize = 10;
+        let galleryMovieId = null;
+        const POSTER_PLACEHOLDER = '/images/placeholder.jpg';
+
+        // Utility functions for modals
+        function showBsModal(modalId) {
+            const modalEl = document.getElementById(modalId);
+            if (typeof bootstrap !== 'undefined' && modalEl) {
+                const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+                modal.show();
+            }
+        }
+
+        function hideBsModal(modalId) {
+            const modalEl = document.getElementById(modalId);
+            if (typeof bootstrap !== 'undefined' && modalEl) {
+                const modal = bootstrap.Modal.getInstance(modalEl);
+                if (modal) modal.hide();
+            }
+        }
 
         function loadMovies(page = 0) {
             currentPage = page;
@@ -285,12 +369,14 @@
                 return;
             }
 
-            tbody.innerHTML = movies.map(movie => `
+            tbody.innerHTML = movies.map(movie => {
+                const posterUrl = movie.posterPath || (movie.id ? `/images/posters/${movie.id}.jpg` : POSTER_PLACEHOLDER);
+                return `
                 <tr>
                     <td>${movie.id}</td>
                     <td>
-                        <img src="${movie.posterPath || '/images/default-poster.jpg'}" 
-                             alt="${movie.title}" 
+                        <img src="${posterUrl || POSTER_PLACEHOLDER}" 
+                             alt="${movie.title} poster" 
                              class="img-thumbnail" 
                              style="width: 50px; height: 75px; object-fit: cover;">
                     </td>
@@ -300,15 +386,24 @@
                     <td><span class="badge bg-info">${movie.ageRating}</span></td>
                     <td>${movie.director}</td>
                     <td>
-                        <button class="btn btn-sm btn-outline-primary" onclick="editMovie(${movie.id})">
-                            <i class="bi bi-pencil"></i>
-                        </button>
-                        <button class="btn btn-sm btn-outline-danger" onclick="deleteMovie(${movie.id}, '${movie.title}')">
-                            <i class="bi bi-trash"></i>
-                        </button>
+                        <div class="admin-icon-group btn-group" role="group">
+                            <button class="btn btn-sm btn-outline-primary" onclick="editMovie(${movie.id})">
+                                <i class="admin-icon bi bi-pencil"></i>
+                            </button>
+                                    <button class="btn btn-sm btn-outline-warning"
+                                        data-movie-id="${movie.id}"
+                                        data-movie-title="${(movie.title || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;')}"
+                                    onclick="openGalleryFromButton(this)">
+                                <i class="admin-icon bi bi-images"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="deleteMovie(${movie.id}, '${movie.title}')">
+                                <i class="admin-icon bi bi-trash"></i>
+                            </button>
+                        </div>
                     </td>
                 </tr>
-            `).join('');
+            `;
+            }).join('');
         }
 
         function renderPagination(data) {
@@ -352,10 +447,10 @@
                 durationMinutes: parseInt(document.getElementById('addDuration').value),
                 ageRating: document.getElementById('addAgeRating').value,
                 director: document.getElementById('addDirector').value,
-                cast: document.getElementById('addCast').value,
+                cast: document.getElementById('addCast').value || null,
                 description: document.getElementById('addDescription').value,
-                posterPath: document.getElementById('addPosterPath').value,
-                trailerUrl: document.getElementById('addTrailerUrl').value
+                posterPath: document.getElementById('addPosterPath').value || null,
+                trailerUrl: document.getElementById('addTrailerUrl').value || null
             };
 
             fetch('/api/v1/movies', {
@@ -365,40 +460,50 @@
             })
             .then(response => {
                 if (response.ok) {
-                    bootstrap.Modal.getInstance(document.getElementById('addMovieModal')).hide();
-                    document.getElementById('addMovieForm').reset();
-                    loadMovies(currentPage);
-                    alert('Movie added successfully!');
+                    return response.json();
                 } else {
-                    throw new Error('Failed to add movie');
+                    return response.text().then(text => {
+                        throw new Error(text || `HTTP ${response.status}`);
+                    });
                 }
+            })
+            .then(() => {
+                hideBsModal('addMovieModal');
+                document.getElementById('addMovieForm').reset();
+                loadMovies(currentPage);
+                alert('Movie added successfully!');
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert('Failed to add movie. Please try again.');
+                alert('Failed to add movie: ' + error.message);
             });
         }
 
         function editMovie(id) {
             fetch(`/api/v1/movies/${id}`)
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    return response.json();
+                })
                 .then(movie => {
                     document.getElementById('editId').value = movie.id;
-                    document.getElementById('editTitle').value = movie.title;
-                    document.getElementById('editGenre').value = movie.genre;
-                    document.getElementById('editDuration').value = movie.durationMinutes;
-                    document.getElementById('editAgeRating').value = movie.ageRating;
-                    document.getElementById('editDirector').value = movie.director;
+                    document.getElementById('editTitle').value = movie.title || '';
+                    document.getElementById('editGenre').value = movie.genre || '';
+                    document.getElementById('editDuration').value = movie.durationMinutes || '';
+                    document.getElementById('editAgeRating').value = movie.ageRating || '';
+                    document.getElementById('editDirector').value = movie.director || '';
                     document.getElementById('editCast').value = movie.cast || '';
-                    document.getElementById('editDescription').value = movie.description;
+                    document.getElementById('editDescription').value = movie.description || '';
                     document.getElementById('editPosterPath').value = movie.posterPath || '';
                     document.getElementById('editTrailerUrl').value = movie.trailerUrl || '';
                     
-                    new bootstrap.Modal(document.getElementById('editMovieModal')).show();
+                    showBsModal('editMovieModal');
                 })
                 .catch(error => {
-                    console.error('Error:', error);
-                    alert('Failed to load movie details');
+                    console.error('Error loading movie:', error);
+                    alert('Failed to load movie details: ' + error.message);
                 });
         }
 
@@ -410,10 +515,10 @@
                 durationMinutes: parseInt(document.getElementById('editDuration').value),
                 ageRating: document.getElementById('editAgeRating').value,
                 director: document.getElementById('editDirector').value,
-                cast: document.getElementById('editCast').value,
+                cast: document.getElementById('editCast').value || null,
                 description: document.getElementById('editDescription').value,
-                posterPath: document.getElementById('editPosterPath').value,
-                trailerUrl: document.getElementById('editTrailerUrl').value
+                posterPath: document.getElementById('editPosterPath').value || null,
+                trailerUrl: document.getElementById('editTrailerUrl').value || null
             };
 
             fetch(`/api/v1/movies/${id}`, {
@@ -423,16 +528,21 @@
             })
             .then(response => {
                 if (response.ok) {
-                    bootstrap.Modal.getInstance(document.getElementById('editMovieModal')).hide();
-                    loadMovies(currentPage);
-                    alert('Movie updated successfully!');
+                    return response.json();
                 } else {
-                    throw new Error('Failed to update movie');
+                    return response.text().then(text => {
+                        throw new Error(text || `HTTP ${response.status}`);
+                    });
                 }
+            })
+            .then(() => {
+                hideBsModal('editMovieModal');
+                loadMovies(currentPage);
+                alert('Movie updated successfully!');
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert('Failed to update movie. Please try again.');
+                alert('Failed to update movie: ' + error.message);
             });
         }
 
@@ -452,6 +562,218 @@
                     console.error('Error:', error);
                     alert('Failed to delete movie. It may be associated with screenings.');
                 });
+        }
+
+        function openGalleryFromButton(button) {
+            const id = Number(button.dataset.movieId);
+            const title = decodeHtml(button.dataset.movieTitle) || `Movie #${id}`;
+            openGallery(id, title);
+        }
+
+        function decodeHtml(value) {
+            if (!value) {
+                return value;
+            }
+            return value
+                .replaceAll('&amp;', '&')
+                .replaceAll('&quot;', '"');
+        }
+
+        function openGallery(id, title) {
+            galleryMovieId = id;
+            document.getElementById('galleryMovieTitle').textContent = title;
+            document.getElementById('galleryFiles').value = '';
+            hideGalleryError();
+            resetPosterUploader();
+            loadGalleryImages();
+            loadPosterPreview();
+            showBsModal('galleryModal');
+        }
+
+        function hideGalleryError() {
+            const alertBox = document.getElementById('galleryError');
+            alertBox.classList.add('d-none');
+            alertBox.textContent = '';
+        }
+
+        function showGalleryError(message) {
+            const alertBox = document.getElementById('galleryError');
+            alertBox.textContent = message;
+            alertBox.classList.remove('d-none');
+        }
+
+        function renderGallery(images) {
+            const grid = document.getElementById('galleryGrid');
+            if (!images.length) {
+                grid.innerHTML = '<div class="col-12 text-muted">No gallery images yet. Upload a few stills!</div>';
+                return;
+            }
+            grid.innerHTML = images.map(img => `
+                <div class="col-md-4">
+                    <div class="gallery-card">
+                        <img src="${img.imagePath}" alt="Still ${img.displayOrder}">
+                        <span class="badge bg-secondary">#${img.displayOrder}</span>
+                        <small class="text-muted">${img.caption || 'No caption'}</small>
+                        <button class="btn btn-sm btn-outline-danger mt-auto" onclick="deleteGalleryImage(${img.id})">
+                            <i class="bi bi-trash"></i> Remove
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function loadGalleryImages() {
+            const grid = document.getElementById('galleryGrid');
+            grid.innerHTML = '<div class="col-12 text-center py-4"><div class="spinner-border" role="status"></div></div>';
+            try {
+                const response = await fetch(`/api/v1/movies/${galleryMovieId}/images`);
+                if (!response.ok) {
+                    throw new Error('Failed to load gallery');
+                }
+                const images = await response.json();
+                renderGallery(images);
+            } catch (error) {
+                grid.innerHTML = '<div class="col-12 text-danger">Unable to load gallery images.</div>';
+                console.error(error);
+            }
+        }
+
+        async function uploadGalleryImages() {
+            if (!galleryMovieId) {
+                return;
+            }
+            const filesInput = document.getElementById('galleryFiles');
+            if (!filesInput.files.length) {
+                showGalleryError('Please choose at least one image to upload.');
+                return;
+            }
+            hideGalleryError();
+            const formData = new FormData();
+            Array.from(filesInput.files).forEach(file => formData.append('files', file));
+            try {
+                const response = await fetch(`/api/v1/movies/${galleryMovieId}/images`, {
+                    method: 'POST',
+                    body: formData
+                });
+                if (!response.ok) {
+                    const message = await response.text();
+                    throw new Error(message || 'Upload failed');
+                }
+                filesInput.value = '';
+                await loadGalleryImages();
+            } catch (error) {
+                console.error(error);
+                showGalleryError(error.message || 'Upload failed.');
+            }
+        }
+
+        async function deleteGalleryImage(imageId) {
+            if (!galleryMovieId || !confirm('Delete this gallery image? At least three images must remain.')) {
+                return;
+            }
+            hideGalleryError();
+            try {
+                const response = await fetch(`/api/v1/movies/${galleryMovieId}/images/${imageId}`, {
+                    method: 'DELETE'
+                });
+                if (!response.ok) {
+                    const message = await response.text();
+                    throw new Error(message || 'Failed to delete image');
+                }
+                await loadGalleryImages();
+            } catch (error) {
+                console.error(error);
+                showGalleryError(error.message || 'Failed to delete image.');
+            }
+        }
+
+        function resetPosterUploader() {
+            const input = document.getElementById('posterFile');
+            if (input) {
+                input.value = '';
+            }
+            hidePosterMessage();
+            const preview = document.getElementById('posterPreview');
+            if (preview) {
+                preview.src = POSTER_PLACEHOLDER;
+                preview.alt = 'Poster preview';
+            }
+        }
+
+        function hidePosterMessage() {
+            const alertBox = document.getElementById('posterAlert');
+            if (!alertBox) {
+                return;
+            }
+            alertBox.textContent = '';
+            alertBox.className = 'alert d-none';
+        }
+
+        function showPosterMessage(message, type = 'danger') {
+            const alertBox = document.getElementById('posterAlert');
+            if (!alertBox) {
+                return;
+            }
+            alertBox.textContent = message;
+            alertBox.className = `alert alert-${type}`;
+        }
+
+        async function loadPosterPreview() {
+            const preview = document.getElementById('posterPreview');
+            if (!preview || !galleryMovieId) {
+                return;
+            }
+            hidePosterMessage();
+            try {
+                const response = await fetch(`/api/v1/movies/${galleryMovieId}`);
+                if (!response.ok) {
+                    throw new Error('Unable to load movie details');
+                }
+                const movie = await response.json();
+                const posterUrl = movie.posterPath || (movie.id ? `/images/posters/${movie.id}.jpg` : POSTER_PLACEHOLDER);
+                preview.src = posterUrl || POSTER_PLACEHOLDER;
+                preview.alt = `${movie.title || 'Poster'} cover art`;
+            } catch (error) {
+                console.error('Poster preview error', error);
+                showPosterMessage(error.message || 'Unable to load poster preview', 'warning');
+            }
+        }
+
+        async function uploadPoster() {
+            if (!galleryMovieId) {
+                showPosterMessage('Select a movie first.');
+                return;
+            }
+            const fileInput = document.getElementById('posterFile');
+            if (!fileInput || !fileInput.files.length) {
+                showPosterMessage('Please choose a poster to upload.');
+                return;
+            }
+            hidePosterMessage();
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            try {
+                const response = await fetch(`/api/v1/movies/${galleryMovieId}/poster`, {
+                    method: 'POST',
+                    body: formData
+                });
+                if (!response.ok) {
+                    const message = await response.text();
+                    throw new Error(message || 'Poster upload failed');
+                }
+                const movie = await response.json();
+                fileInput.value = '';
+                const preview = document.getElementById('posterPreview');
+                if (preview) {
+                    const posterUrl = movie.posterPath || (movie.id ? `/images/posters/${movie.id}.jpg` : POSTER_PLACEHOLDER);
+                    preview.src = posterUrl || POSTER_PLACEHOLDER;
+                }
+                showPosterMessage('Poster updated successfully.', 'success');
+                loadMovies(currentPage);
+            } catch (error) {
+                console.error('Poster upload failed', error);
+                showPosterMessage(error.message || 'Poster upload failed.', 'danger');
+            }
         }
 
         // Search functionality

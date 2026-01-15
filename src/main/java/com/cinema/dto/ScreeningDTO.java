@@ -20,6 +20,8 @@ public class ScreeningDTO {
     private Long movieId;
     
     private String movieTitle;
+
+    private String moviePosterPath;
     
     @NotNull(message = "Hall ID is required")
     private Long hallId;
@@ -27,10 +29,8 @@ public class ScreeningDTO {
     private String hallName;
     
     @NotNull(message = "Start time is required")
-    @Future(message = "Start time must be in the future")
     private LocalDateTime startTime;
     
-    @NotNull(message = "End time is required")
     private LocalDateTime endTime;
     
     @NotNull(message = "Base price is required")

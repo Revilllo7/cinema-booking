@@ -22,6 +22,15 @@ public interface MovieRepository extends JpaRepository<Movie, Long> {
     @Query("SELECT m FROM Movie m WHERE m.active = true AND m.genre = :genre")
     Page<Movie> findByGenre(@Param("genre") String genre, Pageable pageable);
 
+    @Query("SELECT m FROM Movie m WHERE m.active = true AND LOWER(m.title) LIKE LOWER(CONCAT('%', :title, '%')) AND LOWER(m.genre) LIKE LOWER(CONCAT('%', :genre, '%'))")
+    Page<Movie> findByActiveTrueAndTitleContainingIgnoreCaseAndGenreContainingIgnoreCase(@Param("title") String title, @Param("genre") String genre, Pageable pageable);
+
+    @Query("SELECT m FROM Movie m WHERE m.active = true AND LOWER(m.title) LIKE LOWER(CONCAT('%', :title, '%'))")
+    Page<Movie> findByActiveTrueAndTitleContainingIgnoreCase(@Param("title") String title, Pageable pageable);
+
+    @Query("SELECT m FROM Movie m WHERE m.active = true AND LOWER(m.genre) LIKE LOWER(CONCAT('%', :genre, '%'))")
+    Page<Movie> findByActiveTrueAndGenreContainingIgnoreCase(@Param("genre") String genre, Pageable pageable);
+
     @Query("SELECT m FROM Movie m WHERE m.active = true AND m.releaseYear = :year")
     List<Movie> findByReleaseYear(@Param("year") Integer year);
 

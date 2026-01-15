@@ -193,12 +193,30 @@
 
     <div th:replace="~{fragments/footer :: footer}"></div>
 
+    <!-- Bootstrap JS Bundle (loaded before page scripts) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
     <script>
         let currentPage = 0;
         const pageSize = 15;
         let movies = [];
         let halls = [];
+        // Utility functions for modals
+        function showBsModal(modalId) {
+            const modalEl = document.getElementById(modalId);
+            if (typeof bootstrap !== 'undefined' && modalEl) {
+                const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+                modal.show();
+            }
+        }
 
+        function hideBsModal(modalId) {
+            const modalEl = document.getElementById(modalId);
+            if (typeof bootstrap !== 'undefined' && modalEl) {
+                const modal = bootstrap.Modal.getInstance(modalEl);
+                if (modal) modal.hide();
+            }
+        }
         function loadDropdownData() {
             // Load movies
             fetch('/api/v1/movies?page=0&size=1000')
@@ -359,7 +377,7 @@
             })
             .then(response => {
                 if (response.ok) {
-                    bootstrap.Modal.getInstance(document.getElementById('addScreeningModal')).hide();
+                    hideBsModal('addScreeningModal');
                     document.getElementById('addScreeningForm').reset();
                     loadScreenings(currentPage);
                     alert('Screening scheduled successfully!');
@@ -377,7 +395,12 @@
 
         function editScreening(id) {
             fetch(`/api/v1/screenings/${id}`)
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    return response.json();
+                })
                 .then(screening => {
                     document.getElementById('editId').value = screening.id;
                     document.getElementById('editMovieId').value = screening.movieId;
@@ -385,11 +408,11 @@
                     document.getElementById('editStartTime').value = screening.startTime.substring(0, 16);
                     document.getElementById('editBasePrice').value = screening.basePrice;
                     
-                    new bootstrap.Modal(document.getElementById('editScreeningModal')).show();
+                    showBsModal('editScreeningModal');
                 })
                 .catch(error => {
                     console.error('Error:', error);
-                    alert('Failed to load screening details');
+                    alert('Failed to load screening details: ' + error.message);
                 });
         }
 
@@ -409,7 +432,7 @@
             })
             .then(response => {
                 if (response.ok) {
-                    bootstrap.Modal.getInstance(document.getElementById('editScreeningModal')).hide();
+                    hideBsModal('editScreeningModal');
                     loadScreenings(currentPage);
                     alert('Screening updated successfully!');
                 } else {
@@ -451,6 +474,11 @@
             const today = new Date().toISOString().split('T')[0];
             document.getElementById('dateFromFilter').setAttribute('min', today);
             document.getElementById('dateToFilter').setAttribute('min', today);
+            
+            // Add event listeners for screening filters
+            document.getElementById('movieFilter').addEventListener('change', () => loadScreenings(0));
+            document.getElementById('dateFromFilter').addEventListener('change', () => loadScreenings(0));
+            document.getElementById('dateToFilter').addEventListener('change', () => loadScreenings(0));
             
             // Set minimum datetime to now for screening times
             const now = new Date();

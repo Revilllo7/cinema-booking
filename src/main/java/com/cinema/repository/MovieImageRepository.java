@@ -15,4 +15,6 @@ public interface MovieImageRepository extends JpaRepository<MovieImage, Long> {
     List<MovieImage> findByMovieIdOrderByDisplayOrder(@Param("movieId") Long movieId);
 
     void deleteByMovieId(Long movieId);
+
+    long countByMovieId(Long movieId);
 }

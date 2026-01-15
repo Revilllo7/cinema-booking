@@ -47,4 +47,19 @@ public interface ScreeningRepository extends JpaRepository<Screening, Long> {
         @Param("startTime") LocalDateTime startTime,
         @Param("endTime") LocalDateTime endTime
     );
+
+    @Query("SELECT s FROM Screening s WHERE s.active = true AND s.movie.id = :movieId AND s.startTime BETWEEN :startDate AND :endDate ORDER BY s.startTime")
+    Page<Screening> findByActiveTrueAndMovieIdAndStartTimeBetween(
+        @Param("movieId") Long movieId,
+        @Param("startDate") LocalDateTime startDate,
+        @Param("endDate") LocalDateTime endDate,
+        Pageable pageable
+    );
+
+    @Query("SELECT s FROM Screening s WHERE s.active = true AND s.startTime BETWEEN :startDate AND :endDate ORDER BY s.startTime")
+    Page<Screening> findByActiveTrueAndStartTimeBetween(
+        @Param("startDate") LocalDateTime startDate,
+        @Param("endDate") LocalDateTime endDate,
+        Pageable pageable
+    );
 }

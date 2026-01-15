@@ -7,7 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
-import java.util.Set;
+import java.util.List;
 
 @Data
 @NoArgsConstructor
@@ -21,19 +21,24 @@ public class MovieDTO {
     @Size(max = 200, message = "Title must not exceed 200 characters")
     private String title;
     
+    @NotBlank(message = "Description is required")
     @Size(max = 5000, message = "Description must not exceed 5000 characters")
     private String description;
     
+    @NotBlank(message = "Genre is required")
     @Size(max = 100, message = "Genre must not exceed 100 characters")
     private String genre;
     
+    @NotBlank(message = "Age rating is required")
     @Size(max = 10, message = "Age rating must not exceed 10 characters")
     private String ageRating;
     
+    @NotNull(message = "Duration is required")
     @Min(value = 1, message = "Duration must be at least 1 minute")
     @Max(value = 500, message = "Duration must not exceed 500 minutes")
     private Integer durationMinutes;
     
+    @NotBlank(message = "Director is required")
     @Size(max = 150, message = "Director name must not exceed 150 characters")
     private String director;
     
@@ -53,5 +58,5 @@ public class MovieDTO {
     
     private LocalDateTime updatedAt;
     
-    private Set<String> imagePaths;
+    private List<String> imagePaths;
 }

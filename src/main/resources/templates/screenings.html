@@ -4,35 +4,93 @@
 <body>
 <div th:replace="~{fragments/navbar :: navbar}"></div>
 <main class="container my-5">
-    <h1 class="mb-4">Screenings</h1>
-    <div id="screeningsContainer" class="row g-3"></div>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <p class="text-cinema-primary text-uppercase small mb-1">Choose a time</p>
+            <h1 class="mb-0">Screenings</h1>
+        </div>
+        <a href="/movies" th:href="@{/movies}" class="btn btn-outline-cinema">
+            <i class="bi bi-film"></i> Browse Movies
+        </a>
+    </div>
+    <div id="screeningsContainer" class="row g-4"></div>
 </main>
 <div th:replace="~{fragments/footer :: footer}"></div>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        fetch('/api/v1/screenings?page=0&size=12')
+        const SCREENING_POSTER_PLACEHOLDER = '/images/placeholder.jpg';
+        const container = document.getElementById('screeningsContainer');
+
+        container.innerHTML = `
+            <div class="col-12 loading-message">
+                <p class="text-muted">Loading screenings...</p>
+                <div class="spinner-border text-cinema" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>`;
+
+        fetch('/api/v1/screenings?page=0&size=50')
             .then(r => r.json())
             .then(data => {
-                const container = document.getElementById('screeningsContainer');
                 if (data.content && data.content.length) {
-                    container.innerHTML = data.content.map(s => `
-                        <div class="col-md-4">
-                            <div class="card h-100">
-                                <div class="card-body">
-                                    <h5 class="card-title">${s.movieTitle || 'Movie'}</h5>
-                                    <p class="card-text text-muted"><small>${s.startTime || s.dateTime}</small></p>
-                                    <a href="/seat-selection?screeningId=${s.id}" class="btn btn-cinema btn-sm">Select Seats</a>
-                                </div>
-                            </div>
-                        </div>
-                    `).join('');
+                    container.innerHTML = data.content.map(s => {
+                        const poster = resolvePoster(s);
+                        return `
+                            <div class="col-xl-4 col-md-6">
+                                <article class="card screening-card h-100 shadow-subtle">
+                                    <div class="screening-card-grid">
+                                        <div class="screening-card-copy">
+                                            <h5 class="screening-title mb-2">${s.movieTitle || 'Movie TBA'}</h5>
+                                            <p class="screening-time mb-3">${formatScreeningTime(s.startTime || s.dateTime)}</p>
+                                            <button class="btn btn-cinema" data-screening="${s.id}">
+                                                <i class="bi bi-grid-3x3-gap"></i> Select Seats
+                                            </button>
+                                        </div>
+                                        <div class="screening-card-poster">
+                                            <img src="${poster}" alt="${s.movieTitle || 'Movie'} poster">
+                                        </div>
+                                    </div>
+                                </article>
+                            </div>`;
+                    }).join('');
+
+                    container.querySelectorAll('button[data-screening]').forEach(btn => {
+                        btn.addEventListener('click', event => {
+                            const id = event.currentTarget.getAttribute('data-screening');
+                            window.location.href = `/seat-selection?screeningId=${id}`;
+                        });
+                    });
                 } else {
                     container.innerHTML = '<div class="col-12"><p class="text-muted">No screenings available.</p></div>';
                 }
             })
             .catch(() => {
-                document.getElementById('screeningsContainer').innerHTML = '<div class="col-12"><p class="text-danger">Failed to load screenings.</p></div>';
+                container.innerHTML = '<div class="col-12"><p class="text-danger">Failed to load screenings.</p></div>';
             });
+
+        function formatScreeningTime(raw) {
+            if (!raw) return 'Time TBA';
+            const start = new Date(raw);
+            if (Number.isNaN(start.getTime())) {
+                return raw.replace('T', ' ').slice(0, 16);
+            }
+            const date = start.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: '2-digit' });
+            const time = start.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+            return `${date} ${time}`;
+        }
+
+        function resolvePoster(screening) {
+            if (!screening) {
+                return SCREENING_POSTER_PLACEHOLDER;
+            }
+            if (screening.moviePosterPath && screening.moviePosterPath.trim().length) {
+                return screening.moviePosterPath;
+            }
+            if (screening.movieId) {
+                return `/images/posters/${screening.movieId}.jpg`;
+            }
+            return SCREENING_POSTER_PLACEHOLDER;
+        }
     });
 </script>
 </body>

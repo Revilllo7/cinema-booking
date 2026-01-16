@@ -8,7 +8,9 @@
     <div class="row">
         <div class="col-lg-8 mb-4">
             <div class="screen-label">SCREEN</div>
-            <div id="seatMap" class="seat-map"></div>
+            <div class="seat-map-wrapper">
+                <div id="seatMap" class="seat-map"></div>
+            </div>
             <div class="mt-3 seat-legend">
                 <span><span class="seat seat-free"></span> Free</span>
                 <span><span class="seat seat-selected"></span> Selected</span>
@@ -23,7 +25,7 @@
                     <h5>Your Selection</h5>
                     <ul id="selectedSeats" class="list-group list-group-flush mb-3"></ul>
                     <div class="d-grid gap-2">
-                        <a class="btn btn-cinema" href="/cart">Go to Cart</a>
+                        <button id="goToCartBtn" class="btn btn-cinema" type="button" disabled>Go to Cart</button>
                     </div>
                 </div>
             </div>
@@ -40,6 +42,7 @@
     const seatErrorsEl = document.getElementById('seatErrors');
     const screeningId = new URLSearchParams(window.location.search).get('screeningId');
     const storedScreeningId = localStorage.getItem('currentScreeningId');
+    const goToCartBtn = document.getElementById('goToCartBtn');
     const seats = new Map();
     let cartState = { items: [] };
     let ticketOptions = [];
@@ -70,6 +73,15 @@
     // Do NOT release locks on page unload - they need to survive navigation to cart/checkout pages.
 
     init();
+    updateCartCta(false);
+
+    if (goToCartBtn) {
+        goToCartBtn.addEventListener('click', () => {
+            if (!goToCartBtn.disabled) {
+                window.location.href = '/cart';
+            }
+        });
+    }
     
     // Update countdown timers every second so user sees real-time expiration
     setInterval(renderSelectionList, 1000);
@@ -140,6 +152,9 @@
     function renderSeatMap() {
         seatMapEl.innerHTML = '';
         for (let r = 1; r <= rows; r++) {
+            const rowWrapper = document.createElement('div');
+            rowWrapper.className = 'seat-row-wrapper';
+
             const rowEl = document.createElement('div');
             rowEl.className = 'seat-row';
             const rowSeats = Array.from(seats.values())
@@ -155,8 +170,18 @@
                 btn.onclick = () => handleSeatClick(seat);
                 rowEl.appendChild(btn);
             });
-            seatMapEl.appendChild(rowEl);
+            rowWrapper.appendChild(createRowLabel(r));
+            rowWrapper.appendChild(rowEl);
+            rowWrapper.appendChild(createRowLabel(r));
+            seatMapEl.appendChild(rowWrapper);
         }
+    }
+
+    function createRowLabel(rowNumber) {
+        const label = document.createElement('span');
+        label.className = 'seat-row-label';
+        label.textContent = rowNumber;
+        return label;
     }
 
     function seatClassFor(seat) {
@@ -170,6 +195,7 @@
         const items = cartState.items || [];
         if (!items.length) {
             selectedSeatsEl.innerHTML = '<li class="list-group-item text-muted">No seats selected</li>';
+            updateCartCta(false);
             return;
         }
 
@@ -189,6 +215,8 @@
         selectedSeatsEl.querySelectorAll('button[data-seat-id]').forEach(btn => {
             btn.addEventListener('click', () => releaseSeat(Number(btn.dataset.seatId)));
         });
+
+        updateCartCta(true);
     }
 
     function formatCountdown(timestamp) {
@@ -248,6 +276,12 @@
             console.error('Failed to lock seat', error);
             showError(error.message || 'Seat is no longer available.');
         }
+    }
+
+    function updateCartCta(isEnabled) {
+        if (!goToCartBtn) return;
+        goToCartBtn.disabled = !isEnabled;
+        goToCartBtn.classList.toggle('btn-cinema-disabled', !isEnabled);
     }
 
     async function syncCartAdd(seatId) {

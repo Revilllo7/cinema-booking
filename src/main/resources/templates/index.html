@@ -55,14 +55,31 @@
         </div>
 
         <!-- Now Showing Section -->
-        <div class="row mb-4">
+        <div class="row mb-5">
             <div class="col-12">
                 <h2 class="mb-4"><i class="bi bi-film"></i> Now Showing</h2>
                 <div class="row g-4" id="moviesContainer">
                     <!-- Movie cards will be loaded here via JavaScript or server-side -->
                     <div class="col-12 loading-message">
                         <p class="text-muted">Loading movies...</p>
-                        <div class="spinner-border text-primary" role="status">
+                        <div class="spinner-border text-cinema" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Movie Information Section (No Current Screenings) -->
+        <div class="row mb-5">
+            <div class="col-12">
+                <h2 class="mb-4"><i class="bi bi-info-circle"></i> Movie Information</h2>
+                <p class="text-muted mb-4">Classic films and archived movies</p>
+                <div class="row g-4" id="archivedMoviesContainer">
+                    <!-- Archived movie cards will be loaded here -->
+                    <div class="col-12 loading-message">
+                        <p class="text-muted">Loading movies...</p>
+                        <div class="spinner-border text-cinema" role="status">
                             <span class="visually-hidden">Loading...</span>
                         </div>
                     </div>
@@ -105,39 +122,93 @@
     <div th:replace="~{fragments/footer :: footer}"></div>
 
     <script>
-        // Load movies dynamically
+        // Helper function to render movie card
+        const MOVIE_POSTER_PLACEHOLDER = '/images/placeholder.jpg';
+
+        function createMovieCard(movie) {
+            return `
+                <div class="col-lg-3 col-md-4">
+                    <article class="card movie-card h-100 shadow-subtle">
+                        <div class="movie-card-poster">
+                            <img src="${movie.posterPath || MOVIE_POSTER_PLACEHOLDER}" alt="${movie.title}">
+                        </div>
+                        <div class="card-body d-flex flex-column">
+                            <div>
+                                <p class="movie-meta mb-1">${movie.genre || 'N/A'} · ${movie.durationMinutes || 'N/A'} min · ${movie.ageRating || 'PG'}</p>
+                                <h5 class="card-title mb-2">${movie.title}</h5>
+                                <p class="movie-director mb-2">${movie.director || 'Director TBA'}</p>
+                            </div>
+                            <a href="/movie?id=${movie.id}" class="btn btn-cinema w-100 mt-auto">View Details</a>
+                        </div>
+                    </article>
+                </div>
+            `;
+        }
+
+        // Load and separate movies on page load
         document.addEventListener('DOMContentLoaded', function() {
-            fetch('/api/v1/movies?page=0&size=6')
+            // Get all movies (both with and without screenings)
+            fetch('/api/v1/movies?page=0&size=50')
                 .then(response => response.json())
                 .then(data => {
-                    const container = document.getElementById('moviesContainer');
-                    if (data.content && data.content.length > 0) {
-                        container.innerHTML = data.content.map(movie => `
-                            <div class="col-md-4">
-                                <div class="card h-100">
-                                    <img src="${movie.posterPath || '/images/placeholder.jpg'}" class="card-img-top" alt="${movie.title}">
-                                    <div class="card-body">
-                                        <h5 class="card-title">${movie.title}</h5>
-                                        <p class="card-text text-muted">
-                                            <small>
-                                                ${movie.genre || 'N/A'} | ${movie.durationMinutes || 'N/A'} min | ${movie.ageRating || 'N/A'}
-                                            </small>
-                                        </p>
-                                        <a href="/movie?id=${movie.id}" class="btn btn-cinema btn-sm">View Details</a>
-                                    </div>
-                                </div>
-                            </div>
-                        `).join('');
-                    } else {
-                        container.innerHTML = '<div class="col-12"><p class="text-center text-muted">No movies available at the moment.</p></div>';
+                    if (!data.content || data.content.length === 0) {
+                        document.getElementById('moviesContainer').innerHTML = 
+                            '<div class="col-12"><p class="text-center text-muted">No movies available at the moment.</p></div>';
+                        document.getElementById('archivedMoviesContainer').innerHTML = 
+                            '<div class="col-12"><p class="text-center text-muted">No archived movies available.</p></div>';
+                        return;
                     }
+
+                    // Fetch screenings to determine which movies have current/future screenings
+                    fetch('/api/v1/screenings?page=0&size=100')
+                        .then(screeningsResponse => screeningsResponse.json())
+                        .then(screeningsData => {
+                            // Get unique movie IDs that have active screenings
+                            const moviesWithScreenings = new Set();
+                            if (screeningsData.content) {
+                                screeningsData.content.forEach(screening => {
+                                    moviesWithScreenings.add(screening.movieId);
+                                });
+                            }
+
+                            // Separate movies into now showing and archived
+                            const nowShowingMovies = data.content.filter(movie => moviesWithScreenings.has(movie.id));
+                            const archivedMovies = data.content.filter(movie => !moviesWithScreenings.has(movie.id));
+
+                            // Render now showing movies
+                            const moviesContainer = document.getElementById('moviesContainer');
+                            if (nowShowingMovies.length > 0) {
+                                moviesContainer.innerHTML = nowShowingMovies.map(movie => createMovieCard(movie)).join('');
+                            } else {
+                                moviesContainer.innerHTML = '<div class="col-12"><p class="text-center text-muted">No movies currently showing.</p></div>';
+                            }
+
+                            // Render archived movies
+                            const archivedContainer = document.getElementById('archivedMoviesContainer');
+                            if (archivedMovies.length > 0) {
+                                archivedContainer.innerHTML = archivedMovies.map(movie => createMovieCard(movie)).join('');
+                            } else {
+                                archivedContainer.innerHTML = '<div class="col-12"><p class="text-center text-muted">No archived movies available.</p></div>';
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error loading screenings:', error);
+                            // Fallback: show all movies as "now showing"
+                            const moviesContainer = document.getElementById('moviesContainer');
+                            moviesContainer.innerHTML = data.content.map(movie => createMovieCard(movie)).join('');
+                            document.getElementById('archivedMoviesContainer').innerHTML = 
+                                '<div class="col-12"><p class="text-center text-muted">Could not load archived movies at this time.</p></div>';
+                        });
                 })
                 .catch(error => {
                     console.error('Error loading movies:', error);
                     document.getElementById('moviesContainer').innerHTML = 
                         '<div class="col-12"><p class="text-center text-danger">Error loading movies. Please try again later.</p></div>';
+                    document.getElementById('archivedMoviesContainer').innerHTML = 
+                        '<div class="col-12"><p class="text-center text-danger">Error loading archived movies. Please try again later.</p></div>';
                 });
         });
+
     </script>
 </body>
 </html>

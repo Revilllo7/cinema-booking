@@ -4,43 +4,172 @@
 <body>
 <div th:replace="~{fragments/navbar :: navbar}"></div>
 <main class="container my-5">
-    <h1 class="mb-4">Movies</h1>
-    <div class="row g-4" id="moviesList">
-        <div class="col-12 loading-message">
-            <p class="text-muted">Loading movies...</p>
-            <div class="spinner-border text-primary" role="status">
-                <span class="visually-hidden">Loading...</span>
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-5">
+        <div>
+            <p class="text-cinema-primary text-uppercase small mb-1">What's Playing</p>
+            <h1 class="mb-0">Movies</h1>
+            <p class="text-muted mb-0">Browse current screenings or dive into our archive.</p>
+        </div>
+        <button class="btn btn-outline-cinema" id="moviesRefreshBtn" type="button">
+            <i class="bi bi-arrow-clockwise"></i> Refresh List
+        </button>
+    </div>
+
+    <section class="mb-5">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2 class="h4 mb-0">Now Showing</h2>
+            <span class="badge bg-cinema-primary" id="nowShowingCount">0 titles</span>
+        </div>
+        <div class="row g-4" id="nowShowingList">
+            <div class="col-12 loading-message">
+                <p class="text-muted">Checking active screenings...</p>
+                <div class="spinner-border text-cinema" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
             </div>
         </div>
-    </div>
+        <nav id="nowShowingPagination" class="movies-pagination d-none" aria-label="Now showing pagination"></nav>
+    </section>
+
+    <section>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2 class="h4 mb-0">Archived Movies</h2>
+            <span class="badge bg-dark" id="archivedCount">0 titles</span>
+        </div>
+        <div class="row g-4" id="archivedList">
+            <div class="col-12 loading-message">
+                <p class="text-muted">Loading archived catalog...</p>
+                <div class="spinner-border text-cinema" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        </div>
+        <nav id="archivedPagination" class="movies-pagination d-none" aria-label="Archived pagination"></nav>
+    </section>
 </main>
 <div th:replace="~{fragments/footer :: footer}"></div>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        fetch('/api/v1/movies?page=0&size=12')
-            .then(r => r.json())
-            .then(data => {
-                const container = document.getElementById('moviesList');
-                if (data.content && data.content.length) {
-                    container.innerHTML = data.content.map(movie => `
-                        <div class="col-md-3">
-                            <div class="card h-100">
-                                <img src="${movie.posterPath || '/images/placeholder.jpg'}" class="card-img-top" alt="${movie.title}">
-                                <div class="card-body">
-                                    <h5 class="card-title">${movie.title}</h5>
-                                    <p class="card-text text-muted"><small>${movie.genre || ''} · ${movie.durationMinutes || ''} min</small></p>
-                                    <a href="/movie?id=${movie.id}" class="btn btn-cinema btn-sm">View Details</a>
-                                </div>
-                            </div>
-                        </div>
-                    `).join('');
-                } else {
-                    container.innerHTML = '<div class="col-12"><p class="text-muted">No movies found.</p></div>';
-                }
-            })
-            .catch(() => {
-                document.getElementById('moviesList').innerHTML = '<div class="col-12"><p class="text-danger">Failed to load movies.</p></div>';
+        const MOVIE_POSTER_PLACEHOLDER = '/images/placeholder.jpg';
+        const PAGE_SIZE = 8;
+        const refreshBtn = document.getElementById('moviesRefreshBtn');
+        const nowList = document.getElementById('nowShowingList');
+        const archivedList = document.getElementById('archivedList');
+        const nowPagination = document.getElementById('nowShowingPagination');
+        const archivedPagination = document.getElementById('archivedPagination');
+        const nowCount = document.getElementById('nowShowingCount');
+        const archivedCount = document.getElementById('archivedCount');
+
+        let nowMovies = [];
+        let archivedMovies = [];
+        let nowPage = 0;
+        let archivedPage = 0;
+
+        refreshBtn.addEventListener('click', () => loadMovies(true));
+        loadMovies();
+
+        function loadMovies(force = false) {
+            if (!force && (nowMovies.length || archivedMovies.length)) {
+                renderAll();
+                return;
+            }
+
+            const moviesPromise = fetch('/api/v1/movies?page=0&size=200&sortBy=title&direction=ASC').then(r => r.json());
+            const screeningsPromise = fetch('/api/v1/screenings?page=0&size=200').then(r => r.json()).catch(() => ({ content: [] }));
+
+            Promise.all([moviesPromise, screeningsPromise])
+                .then(([movieData, screeningData]) => {
+                    const screenings = screeningData.content || [];
+                    const activeMovieIds = new Set(screenings.map(s => s.movieId));
+                    const movies = movieData.content || [];
+                    nowMovies = movies.filter(m => activeMovieIds.has(m.id));
+                    archivedMovies = movies.filter(m => !activeMovieIds.has(m.id));
+                    nowPage = 0;
+                    archivedPage = 0;
+                    renderAll();
+                })
+                .catch(() => {
+                    const errorHtml = '<div class="col-12"><p class="text-danger">Failed to load movies.</p></div>';
+                    nowList.innerHTML = errorHtml;
+                    archivedList.innerHTML = errorHtml;
+                    nowPagination.classList.add('d-none');
+                    archivedPagination.classList.add('d-none');
+                });
+        }
+
+        function renderAll() {
+            renderSection(nowMovies, nowList, nowPagination, nowCount, nowPage, value => nowPage = value);
+            renderSection(archivedMovies, archivedList, archivedPagination, archivedCount, archivedPage, value => archivedPage = value);
+        }
+
+        function renderSection(dataset, listEl, paginationEl, countBadge, currentPage, setPage) {
+            countBadge.textContent = `${dataset.length} ${dataset.length === 1 ? 'title' : 'titles'}`;
+            if (!dataset.length) {
+                listEl.innerHTML = '<div class="col-12"><p class="text-muted">Nothing to display yet.</p></div>';
+                paginationEl.classList.add('d-none');
+                paginationEl.innerHTML = '';
+                return;
+            }
+
+            const start = currentPage * PAGE_SIZE;
+            const pageItems = dataset.slice(start, start + PAGE_SIZE);
+            listEl.innerHTML = pageItems.map(movieCardTemplate).join('');
+
+            const totalPages = Math.ceil(dataset.length / PAGE_SIZE);
+            if (totalPages <= 1) {
+                paginationEl.classList.add('d-none');
+                paginationEl.innerHTML = '';
+                return;
+            }
+
+            paginationEl.classList.remove('d-none');
+            const buttons = [];
+            buttons.push(`<button class="btn btn-outline-cinema" ${currentPage === 0 ? 'disabled' : ''} data-move="prev">
+                <i class="bi bi-chevron-left"></i>
+            </button>`);
+            for (let i = 0; i < totalPages; i++) {
+                buttons.push(`<button class="btn ${i === currentPage ? 'btn-cinema' : 'btn-outline-cinema'}" data-page="${i}">${i + 1}</button>`);
+            }
+            buttons.push(`<button class="btn btn-outline-cinema" ${currentPage === totalPages - 1 ? 'disabled' : ''} data-move="next">
+                <i class="bi bi-chevron-right"></i>
+            </button>`);
+            paginationEl.innerHTML = buttons.join('');
+
+            paginationEl.querySelectorAll('button[data-page]').forEach(btn => {
+                btn.addEventListener('click', event => {
+                    setPage(Number(event.currentTarget.dataset.page));
+                    renderAll();
+                });
             });
+            paginationEl.querySelectorAll('button[data-move]').forEach(btn => {
+                btn.addEventListener('click', event => {
+                    const delta = event.currentTarget.dataset.move === 'next' ? 1 : -1;
+                    setPage(clamp(currentPage + delta, 0, totalPages - 1));
+                    renderAll();
+                });
+            });
+        }
+
+        function clamp(value, min, max) {
+            return Math.min(Math.max(value, min), max);
+        }
+
+        function movieCardTemplate(movie) {
+            return `
+                <div class="col-xl-3 col-md-4">
+                    <article class="card movie-card h-100 shadow-subtle">
+                        <div class="movie-card-poster">
+                            <img src="${movie.posterPath || MOVIE_POSTER_PLACEHOLDER}" alt="${movie.title}">
+                        </div>
+                        <div class="card-body d-flex flex-column">
+                            <p class="movie-meta mb-1">${movie.genre || 'N/A'} · ${movie.durationMinutes || 'N/A'} min</p>
+                            <h5 class="card-title">${movie.title}</h5>
+                            <p class="movie-director mb-3">${movie.director || 'Director TBA'}</p>
+                            <a href="/movie?id=${movie.id}" class="btn btn-cinema w-100 mt-auto">View Details</a>
+                        </div>
+                    </article>
+                </div>`;
+        }
     });
 </script>
 </body>

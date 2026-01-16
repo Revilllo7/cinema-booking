@@ -3,55 +3,115 @@
 <head th:replace="~{fragments/head :: head}"></head>
 <body>
 <div th:replace="~{fragments/navbar :: navbar}"></div>
-<main class="container my-5">
-    <div class="row">
-        <div class="col-md-8">
-            <div class="card mb-4">
+<main class="container my-5 movie-page" th:attr="data-movie-id=${movie != null ? movie.id : 0}">
+    <div class="row g-4">
+        <div class="col-lg-4">
+            <div class="movie-poster-frame">
+                <img th:src="${movie != null && movie.posterPath != null ? movie.posterPath : '/images/placeholder.jpg'}"
+                     src="/images/placeholder.jpg" alt="Movie poster">
+            </div>
+        </div>
+        <div class="col-lg-8">
+            <article class="movie-hero card shadow-subtle">
                 <div class="card-body">
-                    <h1 class="mb-3" th:text="${movie != null ? movie.title : 'Movie Title'}">Movie Title</h1>
-                    <p class="text-muted mb-2">
-                        <span th:text="${movie != null ? movie.genre : 'Genre'}">Genre</span> ·
-                        <span th:text="${movie != null ? movie.durationMinutes : 120}">120</span> min ·
-                        <span th:text="${movie != null ? movie.ageRating : 'PG-13'}">PG-13</span>
+                    <div class="d-flex justify-content-between flex-wrap gap-3">
+                        <div>
+                            <p class="text-cinema-primary text-uppercase small mb-2">Feature Film</p>
+                            <h1 class="mb-2" th:text="${movie != null ? movie.title : 'Movie Title'}">Movie Title</h1>
+                            <div class="movie-meta-chips">
+                                <span th:text="${movie != null ? movie.ageRating : 'PG-13'}">PG-13</span>
+                                <span th:text="${movie != null ? movie.genre : 'Genre'}">Genre</span>
+                                <span th:text="${movie != null ? movie.durationMinutes : 120} + ' min'">120 min</span>
+                                <span th:text="${movie != null ? (movie.releaseYear != null ? movie.releaseYear : 'Year TBD') : 'Year TBD'}">2026</span>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="movie-director mb-1"><strong>Director:</strong> <span th:text="${movie != null ? movie.director : 'Director Name'}">Director Name</span></p>
+                    <p class="movie-director mb-3"><strong>Cast:</strong> <span th:text="${movie != null ? movie.cast : 'Cast Names'}">Cast Names</span></p>
+                    <p class="movie-description mb-4" th:text="${movie != null ? movie.description : 'Movie description goes here. This is a placeholder for the movie synopsis, providing an overview of the plot, themes, and key elements that make this film unique and engaging.'}">
+                        Placeholder description
                     </p>
-                    <p class="mb-2"><strong>Director:</strong> <span th:text="${movie != null ? movie.director : 'Director Name'}">Director Name</span></p>
-                    <p class="mb-3"><strong>Cast:</strong> <span th:text="${movie != null ? movie.cast : 'Cast Names'}">Cast Names</span></p>
 
-                    <!-- Trailer Embed -->
-                    <div class="ratio ratio-16x9 mb-4">
-                        <iframe th:src="${movie != null ? movie.trailerUrl : null}" src="https://www.youtube.com/embed/dQw4w9WgXcQ" title="Trailer" allowfullscreen></iframe>
+                    <div class="movie-trailer ratio ratio-16x9 mb-4" th:if="${trailerEmbedUrl != null}">
+                        <iframe th:src="${trailerEmbedUrl}" title="Trailer" allowfullscreen></iframe>
+                    </div>
+                    <div class="ratio ratio-16x9 mb-4 gallery-placeholder" th:unless="${trailerEmbedUrl != null}">
+                        <div class="gallery-empty-note">
+                            <i class="bi bi-youtube"></i>
+                            <p class="mb-0">Trailer coming soon. Check back later!</p>
+                        </div>
                     </div>
 
-                    <!-- Gallery -->
-                    <div class="movie-gallery">
-                        <img th:if="${movie != null && movie.imagePaths != null}" th:each="imgPath : ${movie.imagePaths}" th:src="${imgPath}" src="/images/placeholder.jpg" alt="Gallery" class="gallery-img" />
-                        <!-- Fallback (min 3 images) -->
-                        <img src="/images/placeholder.jpg" alt="Gallery" class="gallery-img" />
-                        <img src="/images/placeholder.jpg" alt="Gallery" class="gallery-img" />
-                        <img src="/images/placeholder.jpg" alt="Gallery" class="gallery-img" />
+                    <div class="mb-4">
+                        <h5 class="movie-gallery mb-3">Photo Gallery</h5>
+                        <div th:if="${movie != null && movie.imagePaths != null && !movie.imagePaths.isEmpty()}"
+                             th:with="galleryId=${'movieGallery-' + (movie != null ? movie.id : '0')}">
+                            <div class="carousel slide" data-gallery="movie" data-bs-ride="carousel" th:attr="id=${galleryId}">
+                                <div class="carousel-inner">
+                                    <div class="carousel-item" th:each="imgPath,iter : ${movie.imagePaths}" th:classappend="${iter.index == 0} ? ' active'">
+                                        <img th:src="${imgPath}" src="/images/placeholder.jpg" class="d-block w-100 rounded" alt="Movie still" />
+                                    </div>
+                                </div>
+                                <button class="carousel-control-prev" type="button"
+                                        th:attr="data-bs-target=${'#' + galleryId}" data-bs-slide="prev">
+                                    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                                    <span class="visually-hidden">Previous</span>
+                                </button>
+                                <button class="carousel-control-next" type="button"
+                                        th:attr="data-bs-target=${'#' + galleryId}" data-bs-slide="next">
+                                    <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                                    <span class="visually-hidden">Next</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="movie-gallery" th:unless="${movie != null && movie.imagePaths != null && !movie.imagePaths.isEmpty()}">
+                            <img src="/images/placeholder.jpg" alt="Gallery" class="gallery-img" />
+                            <img src="/images/placeholder.jpg" alt="Gallery" class="gallery-img" />
+                            <img src="/images/placeholder.jpg" alt="Gallery" class="gallery-img" />
+                        </div>
+                        <div class="form-text">Every movie keeps a rotating gallery of at least three stills.</div>
                     </div>
                 </div>
-            </div>
+            </article>
         </div>
-        <div class="col-md-4">
-            <div class="card">
+    </div>
+
+    <div class="row g-4 mt-1">
+                <div class="col-lg-4">
+            <div class="card shadow-subtle h-100">
                 <div class="card-body">
-                    <h5>Upcoming Screenings</h5>
-                    <ul class="list-group list-group-flush" id="screeningsList">
-                        <!-- Loaded via JS -->
-                    </ul>
+                    <h5 class="mb-3">Need help?</h5>
+                    <p class="text-muted">Contact our concierge team for private screenings, accessibility needs, or large group bookings.</p>
+                    <a class="btn btn-cinema" th:href="@{/contact}">
+                        <i class="bi bi-chat-dots"></i> Contact Us
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-8">
+            <div class="card shadow-subtle h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h4 class="mb-0">Upcoming Screenings</h5>
+                        <span class="movie-badge badge bg-cinema-primary" id="screeningsCount">0</span>
+                    </div>
+                    <ul class="list-group list-group-flush" id="screeningsList"></ul>
                     <div class="mt-3 text-end">
-                        <a class="btn btn-cinema" th:href="@{/screenings}">All Screenings</a>
+                        <a class="movie-all-screenings btn btn-outline-cinema" th:href="@{/screenings}">All Screenings</a>
                     </div>
                 </div>
             </div>
         </div>
+
     </div>
 </main>
 <div th:replace="~{fragments/footer :: footer}"></div>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        const movieId = new URLSearchParams(window.location.search).get('id');
+        const movieContainer = document.querySelector('main[data-movie-id]');
+        const movieId = movieContainer?.dataset.movieId && movieContainer.dataset.movieId !== '0'
+            ? movieContainer.dataset.movieId
+            : new URLSearchParams(window.location.search).get('id');
         if (!movieId) {
             document.getElementById('screeningsList').innerHTML = '<li class="list-group-item text-muted">No upcoming screenings</li>';
             return;
@@ -63,19 +123,44 @@
                 const rows = Array.isArray(data) ? data : [];
                 if (!rows.length) {
                     list.innerHTML = '<li class="list-group-item text-muted">No upcoming screenings for this title</li>';
+                    document.getElementById('screeningsCount').textContent = 0;
                     return;
                 }
                 list.innerHTML = rows.map(s => `
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span>${s.startTime || s.dateTime}</span>
-                        <a class="btn btn-sm btn-cinema" href="/seat-selection?screeningId=${s.id}">Select Seats</a>
+                    <li class="list-group-item d-flex justify-content-between align-items-center gap-3">
+                        <div>
+                            <div class="fw-semibold">${formatScreeningTime(s.startTime || s.dateTime)}</div>
+                            <small class="text-muted">Hall ${s.hallName || s.hallNumber || 'N/A'}</small>
+                        </div>
+                        <a class="movie-button btn btn-sm btn-cinema" href="/seat-selection?screeningId=${s.id}">Select Seats</a>
                     </li>
                 `).join('');
+                document.getElementById('screeningsCount').textContent = rows.length;
             })
             .catch(() => {
                 document.getElementById('screeningsList').innerHTML = '<li class="list-group-item text-danger">Error loading screenings</li>';
+                document.getElementById('screeningsCount').textContent = '–';
             });
+        const movieGallery = document.querySelector('.carousel[data-gallery="movie"]');
+        if (movieGallery && window.bootstrap && typeof bootstrap.Carousel === 'function') {
+            bootstrap.Carousel.getOrCreateInstance(movieGallery, {
+                interval: 5000,
+                ride: false,
+                wrap: true
+            });
+        }
     });
+
+    function formatScreeningTime(raw) {
+        if (!raw) return 'Time TBA';
+        const date = new Date(raw);
+        if (Number.isNaN(date.getTime())) {
+            return raw.replace('T', ' ').slice(0, 16);
+        }
+        const datePart = date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: '2-digit' });
+        const timePart = date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+        return `${datePart} · ${timePart}`;
+    }
 </script>
 </body>
 </html>

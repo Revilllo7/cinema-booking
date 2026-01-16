@@ -10,21 +10,21 @@
             <div class="col-lg-8 mx-auto">
                 <!-- Page Header -->
                 <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h2><i class="bi bi-person-circle"></i> My Profile</h2>
-                    <a href="/profile/bookings" th:href="@{/profile/bookings}" class="btn btn-outline-primary">
+                    <h2 class="mb-0"><i class="bi bi-person-circle"></i> My Profile</h2>
+                    <a href="/profile/bookings" th:href="@{/profile/bookings}" class="btn btn-outline-cinema">
                         <i class="bi bi-ticket-perforated"></i> View My Bookings
                     </a>
                 </div>
                 
                 <!-- Success/Info Messages -->
                 <div th:if="${param.todo}" class="alert alert-info alert-dismissible fade show" role="alert">
-                    <i class="bi bi-info-circle"></i> Password change functionality is not yet implemented.
+                    <i class="bi bi-info-circle"></i> functionality is not yet implemented!
                     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                 </div>
                 
                 <!-- User Information Card -->
                 <div class="card shadow mb-4">
-                    <div class="card-header bg-primary text-white">
+                    <div class="card-header bg-cinema-primary text-white">
                         <h5 class="mb-0"><i class="bi bi-person-badge"></i> Account Information</h5>
                     </div>
                     <div class="card-body">
@@ -80,28 +80,30 @@
                 <div class="row">
                     <!-- Edit Profile (TODO) -->
                     <div class="col-md-6 mb-3">
-                        <div class="card h-100 border-warning">
+                        <div class="card h-100 shadow-subtle border-0">
                             <div class="card-body text-center">
-                                <i class="bi bi-pencil-square fs-1 text-warning"></i>
+                                <i class="bi bi-pencil-square fs-1 text-cinema-primary"></i>
                                 <h5 class="card-title mt-3">Edit Profile</h5>
                                 <p class="card-text text-muted">Update your personal information</p>
-                                <button class="btn btn-warning" disabled>
+                                <a href="/profile/change-password" 
+                                   th:href="@{/profile/change-password}" 
+                                   class="btn btn-outline-cinema">
                                     <i class="bi bi-tools"></i> TODO: Coming Soon
-                                </button>
+                                </a>
                             </div>
                         </div>
                     </div>
                     
                     <!-- Change Password (TODO) -->
                     <div class="col-md-6 mb-3">
-                        <div class="card h-100 border-info">
+                        <div class="card h-100 shadow-subtle border-0">
                             <div class="card-body text-center">
-                                <i class="bi bi-key fs-1 text-info"></i>
+                                <i class="bi bi-key fs-1 text-cinema-primary"></i>
                                 <h5 class="card-title mt-3">Change Password</h5>
                                 <p class="card-text text-muted">Update your account password</p>
                                 <a href="/profile/change-password" 
                                    th:href="@{/profile/change-password}" 
-                                   class="btn btn-info">
+                                   class="btn btn-outline-cinema">
                                     <i class="bi bi-tools"></i> TODO: Coming Soon
                                 </a>
                             </div>
@@ -110,8 +112,8 @@
                 </div>
                 
                 <!-- TODO Implementation Note -->
-                <div class="card border-secondary mt-4">
-                    <div class="card-header bg-secondary text-white">
+                <div class="card border-0 shadow-subtle mt-4">
+                    <div class="card-header bg-cinema-primary text-white">
                         <h6 class="mb-0"><i class="bi bi-info-circle"></i> Implementation Notes (TODO)</h6>
                     </div>
                     <div class="card-body">

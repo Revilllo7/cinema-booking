@@ -32,7 +32,7 @@ public class BookingJdbcRepository {
 
     public List<DailySalesDTO> getDailySalesForDateRange(LocalDate startDate, LocalDate endDate) {
         LocalDateTime start = startDate.atStartOfDay();
-        LocalDateTime endExclusive = endDate.plusDays(1).atStartOfDay();
+        LocalDateTime endExclusive = endDate.atStartOfDay();
 
         String sql = baseRangeQuery();
         return jdbcTemplate.query(sql, new DailySalesRowMapper(),
@@ -43,10 +43,14 @@ public class BookingJdbcRepository {
         return """
             SELECT 
                 DATE(b.created_at) as booking_date,
-                COALESCE(SUM(b.total_price), 0) as total_revenue,
-                COALESCE(COUNT(bs.id), 0) as tickets_sold
+                SUM(b.total_price) as total_revenue,
+                COALESCE(SUM(bs_counts.seat_count), 0) as tickets_sold
             FROM bookings b
-            LEFT JOIN booking_seats bs ON b.id = bs.booking_id
+            LEFT JOIN (
+                SELECT booking_id, COUNT(*) as seat_count
+                FROM booking_seats
+                GROUP BY booking_id
+            ) bs_counts ON b.id = bs_counts.booking_id
             WHERE b.created_at >= ?
               AND b.created_at < ?
               AND b.status IN ('CONFIRMED', 'COMPLETED', 'PENDING')

@@ -27,6 +27,20 @@ body {
     background-color: var(--cinema-light-bg);
 }
 
+html, body {
+    height: 100%;
+}
+
+body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+main {
+    flex: 1 0 auto;
+}
+
 /* ============================================
    3. NAVBAR STYLES
    ============================================ */
@@ -76,23 +90,47 @@ body {
     border-color: var(--cinema-hover);
 }
 
+.btn-cinema:disabled,
+.btn-cinema.btn-cinema-disabled,
+.btn-cinema-disabled {
+    background-color: #f5c5c8;
+    border-color: #f5c5c8;
+    color: #8c2c32;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+.btn-outline-cinema {
+    color: var(--cinema-primary);
+    border-color: var(--cinema-primary);
+    background-color: transparent;
+    transition: all 0.3s ease;
+}
+
+.btn-outline-cinema:hover,
+.btn-outline-cinema:focus {
+    color: var(--cinema-text-white);
+    background-color: var(--cinema-primary);
+    border-color: var(--cinema-primary);
+}
+
 /* ============================================
    5. HERO CAROUSEL / BANNER STYLES
    ============================================ */
 
 .hero-banner-gradient-1 {
     min-height: 300px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #e50914 0%, #170607 100%);
 }
 
 .hero-banner-gradient-2 {
     min-height: 300px;
-    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    background: linear-gradient(135deg, #110303 0%, #801321 100%);
 }
 
 .hero-banner-gradient-3 {
     min-height: 300px;
-    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    background: linear-gradient(135deg, #170607 0%, #e50914 50%, #110303 100%);
 }
 
 .carousel-item {
@@ -123,6 +161,7 @@ body {
 
 .card-body {
     padding: 1.5rem;
+    align-items: center;
 }
 
 .card-title {
@@ -132,6 +171,75 @@ body {
 
 .card-text {
     font-size: 0.9rem;
+}
+
+.movie-card {
+    border-radius: 0.75rem;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.movie-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.movie-card-poster {
+    width: 100%;
+    aspect-ratio: 2 / 3;
+    border-radius: 0.75rem 0.75rem 0 0;
+    overflow: hidden;
+    background: #111;
+}
+
+.movie-card-poster img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.movie-meta {
+    font-size: 0.85rem;
+    color: var(--cinema-text-muted);
+    letter-spacing: 0.02em;
+}
+
+.movie-director {
+    font-size: 1.3rem;
+    color: #7a6f6f;
+}
+
+.movie-description {
+    font-size: 1.2rem;
+    color: var(--cinema-text-muted);
+    line-height: 1.5;
+}
+
+.movie-gallery {
+    margin-top: 5rem;
+    font-size: 2rem;
+    color: var(--cinema-text-muted);
+    line-height: 1.5;
+}
+
+.movie-trailer iframe {
+    border-radius: 0.5rem;
+}
+
+.movie-button {
+    margin-top: 1rem;
+    font-size: 1.1rem;
+}
+
+.movie-badge {
+    font-size: 1rem;
+    font-weight: 600;
+    padding: 0.4rem 0.75rem;
+}
+
+.movie-all-screenings {
+    font-size: 1.25rem;
+    font-weight: 500;
 }
 
 /* ============================================
@@ -245,6 +353,10 @@ body {
     color: var(--cinema-text-muted);
 }
 
+.text-cinema {
+    color: var(--cinema-primary) !important;
+}
+
 /* ============================================
    11. LOADING & STATE STYLES
    ============================================ */
@@ -336,10 +448,52 @@ body {
 
 .seat-map {
     display: inline-block;
-    padding: 12px;
+    padding: 20px 24px;
     background: #fff;
     border-radius: 8px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    position: relative;
+    overflow: hidden;
+}
+
+.seat-map::before,
+.seat-map::after {
+    content: "";
+    position: absolute;
+    top: 16px;
+    bottom: 16px;
+    width: 2px;
+    background: #dfe0e4;
+    opacity: 0.7;
+}
+
+.seat-map::before {
+    left: 35%;
+}
+
+.seat-map::after {
+    right: 35%;
+}
+
+.seat-map-wrapper {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+}
+
+.seat-row-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 6px;
+}
+
+.seat-row-label {
+    font-size: 0.85rem;
+    color: var(--cinema-text-muted);
+    width: 32px;
+    text-align: center;
 }
 
 .seat-row { display: flex; justify-content: center; margin-bottom: 6px; }
@@ -407,6 +561,108 @@ body {
 }
 .gallery-card .badge {
     align-self: flex-start;
+}
+
+/* ============================================
+   15B. MOVIE DETAIL PAGE STYLES
+   ============================================ */
+
+.movie-page .movie-poster-frame {
+    border-radius: 1rem;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
+    background: radial-gradient(circle at top, rgba(229, 9, 20, 0.35), rgba(20, 20, 20, 0.95));
+    min-height: 520px;
+    display: flex;
+    align-items: stretch;
+}
+
+.movie-page .movie-poster-frame img {
+    width: 100%;
+    object-fit: cover;
+}
+
+.movie-hero {
+    border: none;
+    border-radius: 1rem;
+}
+
+.movie-hero h1 {
+    font-size: clamp(2.25rem, 3vw, 3.5rem);
+    font-weight: 700;
+}
+
+.movie-meta-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.movie-meta-chips span {
+    background: rgba(229, 9, 20, 0.08);
+    color: var(--cinema-primary);
+    padding: 0.35rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.movie-page .list-group-item {
+    border: none;
+    border-radius: 0.75rem;
+    margin-bottom: 0.75rem;
+    background: #fafafa;
+}
+
+.movie-page .list-group-item:last-child {
+    margin-bottom: 0;
+}
+
+.movie-page .badge {
+    font-weight: 600;
+}
+
+@media (max-width: 992px) {
+    .movie-page .movie-poster-frame {
+        min-height: 420px;
+    }
+}
+
+@media (max-width: 576px) {
+    .movie-meta-chips {
+        flex-direction: column;
+        gap: 0.35rem;
+    }
+}
+
+/* ============================================
+   15C. POSTER UPLOADER STYLES
+   ============================================ */
+
+.poster-uploader-card .poster-preview {
+    border-radius: 0.75rem;
+    overflow: hidden;
+    background: #0f0f0f;
+    min-height: 260px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.poster-uploader-card .poster-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.poster-uploader-card .form-text {
+    font-size: 0.85rem;
+}
+
+.poster-uploader-card .badge {
+    letter-spacing: 0.05em;
 }
 
 @media (max-width: 768px) {
@@ -491,6 +747,18 @@ body {
 .admin-table .btn-sm {
     padding: 0.25rem 0.5rem;
     font-size: 0.75rem;
+}
+
+.admin-icon {
+    font-size: 1.25rem;
+    font-weight: bold;
+}
+
+.admin-icon-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding-right: 1rem;
 }
 
 /* ============================================
@@ -628,5 +896,160 @@ body {
     .booking-status-badge {
         font-size: 0.75rem;
         padding: 0.3rem 0.5rem;
+    }
+}
+
+/* ============================================
+   24. PUBLIC PAGE ENHANCEMENTS
+   ============================================ */
+
+.movies-pagination {
+    margin-top: 2rem;
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.screening-card {
+    border: none;
+    border-radius: 0.75rem;
+}
+
+.screening-card-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 1rem;
+    align-items: center;
+    padding: 1.25rem 1.25rem 1.25rem 1.75rem;
+}
+
+.screening-card-poster {
+    aspect-ratio: 1 / 1;
+    border-radius: 0.75rem;
+    overflow: hidden;
+    background: #0f0f0f;
+}
+
+.screening-card-poster img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.screening-title {
+    font-weight: 600;
+    color: var(--cinema-dark);
+}
+
+.screening-time {
+    color: var(--cinema-text-muted);
+    font-size: 0.95rem;
+}
+
+.about-page .info-card,
+.contact-page .info-card {
+    background: #fff;
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+    display: flex;
+    gap: 1.25rem;
+    align-items: flex-start;
+}
+
+.info-card-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 0.75rem;
+    display: grid;
+    place-items: center;
+    font-size: 1.5rem;
+}
+
+.timeline {
+    border-left: 2px solid #eee;
+    padding-left: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.timeline-item {
+    position: relative;
+    padding-left: 1.5rem;
+}
+
+.timeline-item::before {
+    content: "";
+    position: absolute;
+    left: -1.5rem;
+    top: 0.5rem;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--cinema-primary);
+}
+
+.timeline-year {
+    font-weight: 700;
+    color: var(--cinema-primary);
+    display: inline-block;
+    margin-bottom: 0.25rem;
+}
+
+.contact-page .card {
+    border: none;
+    border-radius: 0.75rem;
+}
+
+.contact-form .form-control {
+    background: #fafafa;
+}
+
+.contact-page {
+    padding-bottom: 4rem;
+}
+
+.alert-cinema {
+    background: #fff0f1;
+    border: 1px solid #ffd5d8;
+    color: #771014;
+}
+
+.nav-link-btn {
+    border: none;
+    padding: 0;
+    color: inherit;
+}
+
+.nav-link-btn:hover,
+.nav-link-btn:focus {
+    color: var(--cinema-primary);
+}
+
+@media (max-width: 992px) {
+    .screening-card-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .seat-map::before,
+    .seat-map::after {
+        display: none;
+    }
+}
+
+@media (max-width: 768px) {
+    .movie-card-poster {
+        border-radius: 0.75rem 0.75rem 0 0;
+    }
+
+    .seat-row-wrapper {
+        gap: 6px;
+    }
+
+    .seat-row-label {
+        width: 24px;
+        font-size: 0.75rem;
     }
 }

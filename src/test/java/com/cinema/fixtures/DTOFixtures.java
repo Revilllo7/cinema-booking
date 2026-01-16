@@ -67,7 +67,7 @@ public class DTOFixtures {
             .posterPath("/posters/inception.jpg")
             .trailerUrl("https://youtube.com/watch?v=YoHD9XEInc0")
             .active(true)
-            .imagePaths(new HashSet<>())
+            .imagePaths(List.of())
             .createdAt(LocalDateTime.now().minusDays(60))
             .updatedAt(LocalDateTime.now().minusDays(10))
             .build();

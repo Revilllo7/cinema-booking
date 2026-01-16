@@ -670,4 +670,94 @@ class BookingServiceTest {
         }
         then(bookingRepository).should(never()).deleteById(any());
     }
+
+    // ========== Enhanced Coverage Tests ==========
+
+    @Test
+    void getBookingsByUser_WithValidUser_ReturnsUserBookings() {
+        Pageable pageable = PageRequest.of(0, 10);
+        Booking booking = EntityFixtures.bookingBuilder()
+            .user(testUser)
+            .screening(testScreening)
+            .status(Booking.BookingStatus.CONFIRMED)
+            .build();
+        Page<Booking> bookingPage = new PageImpl<>(List.of(booking), pageable, 1);
+
+        given(userRepository.existsById(testUser.getId())).willReturn(true);
+        given(bookingRepository.findByUserId(testUser.getId(), pageable))
+            .willReturn(bookingPage);
+
+        Page<BookingDTO> result = bookingService.getBookingsByUser(testUser.getId(), pageable);
+
+        assertThat(result.getContent()).isNotEmpty();
+        assertThat(result.getTotalElements()).isEqualTo(1);
+    }
+
+    @Test
+    void getBookingsByScreening_WithNoBookings_ReturnsEmptyList() {
+        given(bookingRepository.findByScreeningId(testScreening.getId()))
+            .willReturn(List.of());
+
+        List<BookingDTO> result = bookingService.getBookingsByScreening(testScreening.getId());
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void getBookingsByStatus_ConfirmedStatus_ReturnsMatchingBookings() {
+        Pageable pageable = PageRequest.of(0, 10);
+        Booking confirmed = EntityFixtures.bookingBuilder()
+            .user(testUser)
+            .screening(testScreening)
+            .status(Booking.BookingStatus.CONFIRMED)
+            .build();
+        Page<Booking> bookingPage = new PageImpl<>(List.of(confirmed), pageable, 1);
+
+        given(bookingRepository.findByStatus(Booking.BookingStatus.CONFIRMED, pageable))
+            .willReturn(bookingPage);
+
+        Page<BookingDTO> result = bookingService.getBookingsByStatus(
+            Booking.BookingStatus.CONFIRMED, pageable);
+
+        assertThat(result.getContent()).hasSize(1);
+    }
+
+    @Test
+    void getBookingsByDateRange_WithBookingsInRange_ReturnsMatching() {
+        LocalDateTime start = LocalDateTime.now();
+        LocalDateTime end = start.plusDays(1);
+
+        Booking booking = EntityFixtures.bookingBuilder()
+            .user(testUser)
+            .screening(testScreening)
+            .createdAt(start.plusHours(1))
+            .build();
+
+        given(bookingRepository.findByCreatedAtBetween(start, end))
+            .willReturn(List.of(booking));
+
+        List<BookingDTO> result = bookingService.getBookingsByDateRange(start, end);
+
+        assertThat(result).isNotEmpty();
+    }
+
+    @Test
+    void confirmBooking_WhenAlreadyConfirmed_StayConfirmed() {
+        testBooking.setStatus(Booking.BookingStatus.CONFIRMED);
+        given(bookingRepository.findById(1L)).willReturn(Optional.of(testBooking));
+        assertThatThrownBy(() -> bookingService.confirmBooking(1L, "CREDIT_CARD", "REF-123"))
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessageContaining("Only pending bookings");
+    }
+
+    @Test
+    void cancelBooking_ChangesStatusToCancelled() {
+        testBooking.setStatus(Booking.BookingStatus.CONFIRMED);
+        given(bookingRepository.findById(1L)).willReturn(Optional.of(testBooking));
+        given(bookingRepository.save(any())).willReturn(testBooking);
+
+        bookingService.cancelBooking(1L, "User requested cancellation");
+
+        assertThat(testBooking.getStatus()).isEqualTo(Booking.BookingStatus.CANCELLED);
+    }
 }

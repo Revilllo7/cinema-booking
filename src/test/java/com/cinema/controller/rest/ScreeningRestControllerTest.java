@@ -38,7 +38,7 @@ class ScreeningRestControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
-    @MockBean
+        @MockBean
     private ScreeningService screeningService;
 
     private ScreeningDTO validScreeningDTO;
@@ -61,7 +61,7 @@ class ScreeningRestControllerTest {
                     .contentType(MediaType.APPLICATION_JSON))
                     .andExpect(status().isOk());
 
-            verify(screeningService).getAllActiveScreenings(any());
+            verify(screeningService).getAllActiveScreenings(any(), isNull(), isNull(), isNull());
         }
 
         @Test
@@ -73,7 +73,7 @@ class ScreeningRestControllerTest {
                     .contentType(MediaType.APPLICATION_JSON))
                     .andExpect(status().isOk());
 
-            verify(screeningService).getAllActiveScreenings(any());
+                        verify(screeningService).getAllActiveScreenings(any(), isNull(), isNull(), isNull());
         }
     }
 

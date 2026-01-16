@@ -232,19 +232,20 @@ class UserServiceTest {
     void createUser_ValidUser_EncodesPassword() {
         // Given
         UserDTO newUserDTO = DTOFixtures.createUserDTOWithoutId();
+        String originalPassword = newUserDTO.getPassword();
         User savedUser = EntityFixtures.userBuilder().id(1L).build();
 
         given(userRepository.findByUsername(anyString())).willReturn(Optional.empty());
         given(userRepository.findByEmail(anyString())).willReturn(Optional.empty());
         given(roleRepository.findByName("ROLE_USER")).willReturn(Optional.of(EntityFixtures.createUserRole()));
-        given(passwordEncoder.encode(anyString())).willReturn("encoded_password");
+        given(passwordEncoder.encode(originalPassword)).willReturn("encoded_password");
         given(userRepository.save(any(User.class))).willReturn(savedUser);
 
         // When
         userService.createUser(newUserDTO);
 
         // Then
-        then(passwordEncoder).should(times(1)).encode(newUserDTO.getPassword());
+        then(passwordEncoder).should(times(1)).encode(originalPassword);
     }
 
     @Test

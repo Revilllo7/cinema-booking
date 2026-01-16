@@ -52,7 +52,7 @@ class MovieRestControllerTest {
         @DisplayName("Should return paged movies")
         void getAllMovies_ReturnsPage() throws Exception {
             Page<MovieDTO> page = new PageImpl<>(List.of(validMovieDTO));
-            when(movieService.getAllActiveMovies(any())).thenReturn(page);
+            when(movieService.getAllActiveMovies(any(), isNull(), isNull())).thenReturn(page);
 
             mockMvc.perform(get("/api/v1/movies")
                     .param("page", "0")
@@ -60,7 +60,7 @@ class MovieRestControllerTest {
                     .contentType(MediaType.APPLICATION_JSON))
                     .andExpect(status().isOk());
 
-            verify(movieService).getAllActiveMovies(any());
+            verify(movieService).getAllActiveMovies(any(), isNull(), isNull());
         }
     }
 

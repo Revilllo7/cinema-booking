@@ -28,6 +28,8 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.never;
@@ -182,7 +184,7 @@ class ScreeningServiceTest {
     void getScreeningsByMovie_ExistingMovie_ReturnsScreeningsForMovie() {
         // Given
         List<Screening> screenings = List.of(testScreening);
-        given(screeningRepository.findByMovieIdAndStartTimeAfter(any(Long.class), any(LocalDateTime.class)))
+        given(screeningRepository.findByMovieIdAndStartTimeAfter(eq(1L), any(LocalDateTime.class)))
             .willReturn(screenings);
 
         // When
@@ -195,7 +197,7 @@ class ScreeningServiceTest {
     @Test
     void getScreeningsByMovie_NonExistingMovie_ReturnsEmptyList() {
         // Given
-        given(screeningRepository.findByMovieIdAndStartTimeAfter(any(Long.class), any(LocalDateTime.class)))
+        given(screeningRepository.findByMovieIdAndStartTimeAfter(eq(999L), any(LocalDateTime.class)))
             .willReturn(List.of());
 
         // When
@@ -208,7 +210,7 @@ class ScreeningServiceTest {
     @Test
     void getScreeningsByMovie_CallsRepository_WithMovieIdAndCurrentTime() {
         // Given
-        given(screeningRepository.findByMovieIdAndStartTimeAfter(any(Long.class), any(LocalDateTime.class)))
+        given(screeningRepository.findByMovieIdAndStartTimeAfter(anyLong(), any(LocalDateTime.class)))
             .willReturn(List.of(testScreening));
 
         // When
@@ -467,5 +469,149 @@ class ScreeningServiceTest {
             // Expected
         }
         then(screeningRepository).should(never()).deleteById(any());
+    }
+
+    // ========== Enhanced Coverage Tests ==========
+
+    @Test
+    void createScreening_WithConflictingScreenings_ThrowsException() {
+        LocalDateTime start = LocalDateTime.now().plusDays(1);
+        LocalDateTime end = start.plusHours(2);
+
+        ScreeningDTO dto = ScreeningDTO.builder()
+            .movieId(1L)
+            .hallId(1L)
+            .startTime(start)
+            .endTime(end)
+            .basePrice(20.0)
+            .active(true)
+            .build();
+
+        given(movieRepository.findById(1L)).willReturn(Optional.of(testMovie));
+        given(hallRepository.findById(1L)).willReturn(Optional.of(testHall));
+        given(screeningRepository.existsConflictingScreening(eq(1L), eq(-1L), any(LocalDateTime.class), any(LocalDateTime.class)))
+            .willReturn(true);
+
+        assertThatThrownBy(() -> screeningService.createScreening(dto))
+            .isInstanceOf(IllegalStateException.class);
+
+        then(screeningRepository).should(never()).save(any(Screening.class));
+    }
+
+    @Test
+    void createScreening_WhenMovieNotFound_ThrowsException() {
+        ScreeningDTO dto = ScreeningDTO.builder()
+            .movieId(999L)
+            .hallId(1L)
+            .startTime(LocalDateTime.now().plusDays(1))
+            .endTime(LocalDateTime.now().plusDays(1).plusHours(2))
+            .basePrice(20.0)
+            .active(true)
+            .build();
+
+        given(movieRepository.findById(999L)).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> screeningService.createScreening(dto))
+            .isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    void createScreening_WhenHallNotFound_ThrowsException() {
+        ScreeningDTO dto = ScreeningDTO.builder()
+            .movieId(1L)
+            .hallId(999L)
+            .startTime(LocalDateTime.now().plusDays(1))
+            .endTime(LocalDateTime.now().plusDays(1).plusHours(2))
+            .basePrice(20.0)
+            .active(true)
+            .build();
+
+        given(movieRepository.findById(1L)).willReturn(Optional.of(testMovie));
+        given(hallRepository.findById(999L)).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> screeningService.createScreening(dto))
+            .isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    void getScreeningsByMovie_WithValidMovie_ReturnsScreenings() {
+        given(screeningRepository.findByMovieIdAndStartTimeAfter(eq(1L), any(LocalDateTime.class)))
+            .willReturn(List.of(testScreening));
+
+        List<ScreeningDTO> result = screeningService.getScreeningsByMovie(1L);
+
+        assertThat(result).isNotEmpty();
+    }
+
+    @Test
+    void getScreeningsByHall_WithValidHall_ReturnsScreenings() {
+        given(screeningRepository.findByHallIdAndStartTimeAfter(eq(1L), any(LocalDateTime.class)))
+            .willReturn(List.of(testScreening));
+
+        List<ScreeningDTO> result = screeningService.getScreeningsByHall(1L);
+
+        assertThat(result).isNotEmpty();
+    }
+
+    @Test
+    void createScreening_WithNoConflicts_Succeeds() {
+        LocalDateTime start = LocalDateTime.now().plusDays(1);
+        LocalDateTime end = start.plusHours(2);
+
+        ScreeningDTO dto = ScreeningDTO.builder()
+            .movieId(1L)
+            .hallId(1L)
+            .startTime(start)
+            .endTime(end)
+            .basePrice(20.0)
+            .active(true)
+            .build();
+
+        given(movieRepository.findById(1L)).willReturn(Optional.of(testMovie));
+        given(hallRepository.findById(1L)).willReturn(Optional.of(testHall));
+        given(screeningRepository.existsConflictingScreening(eq(1L), eq(-1L), any(LocalDateTime.class), any(LocalDateTime.class)))
+            .willReturn(false);
+        given(screeningRepository.save(any(Screening.class)))
+            .willReturn(testScreening);
+
+        ScreeningDTO result = screeningService.createScreening(dto);
+
+        assertThat(result).isNotNull();
+        then(screeningRepository).should().save(any(Screening.class));
+    }
+
+    @Test
+    void updateScreening_WithConflictingTime_ThrowsException() {
+        LocalDateTime newStart = LocalDateTime.now().plusDays(2);
+        LocalDateTime newEnd = newStart.plusHours(2);
+
+        ScreeningDTO dto = ScreeningDTO.builder()
+            .id(1L)
+            .movieId(1L)
+            .hallId(1L)
+            .startTime(newStart)
+            .endTime(newEnd)
+            .basePrice(20.0)
+            .active(true)
+            .build();
+
+        given(screeningRepository.findById(1L)).willReturn(Optional.of(testScreening));
+        given(screeningRepository.existsConflictingScreening(eq(1L), eq(1L), any(LocalDateTime.class), any(LocalDateTime.class)))
+            .willReturn(true);
+
+        assertThatThrownBy(() -> screeningService.updateScreening(1L, dto))
+            .isInstanceOf(IllegalStateException.class);
+
+        then(screeningRepository).should(never()).save(any(Screening.class));
+    }
+
+    @Test
+    void getScreeningById_WhenInactive_StillReturnsIt() {
+        testScreening.setActive(false);
+        given(screeningRepository.findById(1L)).willReturn(Optional.of(testScreening));
+
+        ScreeningDTO result = screeningService.getScreeningById(1L);
+
+        assertThat(result).isNotNull();
     }
 }

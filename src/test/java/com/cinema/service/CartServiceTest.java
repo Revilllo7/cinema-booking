@@ -174,4 +174,88 @@ class CartServiceTest {
             .containsExactly(3L, 7L);
         assertThat(responses.get(1).getName()).isEqualTo(TicketTypeName.SENIOR);
     }
+
+    @Test
+    void addSeat_WithValidSeat_AddsToCart() {
+        when(screeningRepository.findByIdAndActiveTrue(screening.getId())).thenReturn(Optional.of(screening));
+        when(seatRepository.findById(seat.getId())).thenReturn(Optional.of(seat));
+        when(ticketTypeRepository.findByIdAndActiveTrue(ticketType.getId())).thenReturn(Optional.of(ticketType));
+        when(seatLockRepository.findActiveLockForSession(eq(screening.getId()), eq(seat.getId()), eq("session-1"), any(LocalDateTime.class)))
+            .thenReturn(Optional.of(SeatLock.builder()
+                .seat(seat)
+                .screening(screening)
+                .sessionId("session-1")
+                .expiresAt(LocalDateTime.now().plusMinutes(5))
+                .build()));
+
+        CartResponse response = cartService.addSeat(screening.getId(), seat.getId(), 
+            ticketType.getId(), "session-1", "testuser");
+
+        assertThat(response).isNotNull();
+    }
+
+    @Test
+    void getTicketOptions_ReturnsAllActiveTypes() {
+        TicketType senior = TicketType.builder()
+            .id(2L)
+            .name("Senior")
+            .priceModifier(70.0)
+            .active(true)
+            .build();
+
+        when(ticketTypeRepository.findByActiveTrueOrderByPriceModifier())
+            .thenReturn(List.of(ticketType, senior));
+
+        List<TicketOptionResponse> options = cartService.getTicketOptions();
+
+        assertThat(options).hasSize(2);
+        verify(ticketTypeRepository).findByActiveTrueOrderByPriceModifier();
+    }
+
+    @Test
+    void addSeat_WhenSeatAlreadyInCart_Throws() {
+        when(screeningRepository.findByIdAndActiveTrue(screening.getId())).thenReturn(Optional.of(screening));
+        when(seatRepository.findById(seat.getId())).thenReturn(Optional.of(seat));
+        when(ticketTypeRepository.findByIdAndActiveTrue(ticketType.getId())).thenReturn(Optional.of(ticketType));
+        when(seatLockRepository.findActiveLockForSession(eq(screening.getId()), eq(seat.getId()), eq("session-1"), any(LocalDateTime.class)))
+            .thenReturn(Optional.of(SeatLock.builder()
+                .seat(seat)
+                .screening(screening)
+                .sessionId("session-1")
+                .expiresAt(LocalDateTime.now().plusMinutes(5))
+                .build()));
+
+        cartService.addSeat(screening.getId(), seat.getId(), ticketType.getId(), "session-1", "testuser");
+
+        assertThatThrownBy(() -> cartService.addSeat(screening.getId(), seat.getId(), 
+            ticketType.getId(), "session-1", "testuser"))
+            .isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    void getCart_WithMultipleScreenings_ReturnsCurrentScreeningCart() {
+        sessionCart.setScreeningId(screening.getId());
+        sessionCart.getItems().put(seat.getId(), CartItem.builder()
+            .seatId(seat.getId())
+            .ticketType(TicketTypeName.STANDARD)
+            .price(35.0)
+            .build());
+
+        SeatLock lock = SeatLock.builder()
+            .seat(seat)
+            .screening(screening)
+            .sessionId("session-1")
+            .status(SeatLock.SeatLockStatus.ACTIVE)
+            .expiresAt(LocalDateTime.now().plusMinutes(5))
+            .build();
+
+        when(seatLockRepository.findActiveLocksForSession(eq(screening.getId()), eq("session-1"), any(LocalDateTime.class)))
+            .thenReturn(List.of(lock));
+        when(seatLockRepository.findActiveLocksForUsername(eq(screening.getId()), eq("testuser"), any(LocalDateTime.class)))
+            .thenReturn(List.of());
+
+        CartResponse response = cartService.getCart(screening.getId(), "session-1", "testuser");
+
+        assertThat(response.getItems()).hasSize(1);
+    }
 }

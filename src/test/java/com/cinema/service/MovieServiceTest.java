@@ -23,8 +23,10 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 
@@ -37,6 +39,9 @@ class MovieServiceTest {
     @Mock
     private MovieRepository movieRepository;
 
+    @Mock
+    private MediaStorageService mediaStorageService;
+
     @InjectMocks
     private MovieService movieService;
 
@@ -46,6 +51,7 @@ class MovieServiceTest {
     void setUp() {
         testMovie = EntityFixtures.createDefaultMovie();
         testMovie.setId(1L); // Set ID for service mocking tests
+        lenient().when(mediaStorageService.listMovieImages(anyLong())).thenReturn(List.of());
     }
 
     // ========== getAllActiveMovies Tests ==========
@@ -307,5 +313,108 @@ class MovieServiceTest {
             // Expected
         }
         then(movieRepository).should(never()).save(any());
+    }
+
+    // ========== Enhanced Coverage Tests ==========
+
+    @Test
+    void getAllActiveMovies_WithFilter_ReturnsFilteredResults() {
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<Movie> moviesPage = new PageImpl<>(List.of(testMovie), pageable, 1);
+
+        given(movieRepository.findByActiveTrueAndTitleContainingIgnoreCase("Dark", pageable))
+            .willReturn(moviesPage);
+
+        Page<MovieDTO> result = movieService.getAllActiveMovies(pageable, "Dark", null);
+
+        assertThat(result.getContent()).isNotEmpty();
+    }
+
+    @Test
+    void getAllActiveMovies_WithGenreFilter_ReturnsMatchingGenres() {
+        Pageable pageable = PageRequest.of(0, 10);
+        testMovie.setGenre("Action");
+        Page<Movie> moviesPage = new PageImpl<>(List.of(testMovie), pageable, 1);
+
+        given(movieRepository.findByActiveTrueAndGenreContainingIgnoreCase("Action", pageable))
+            .willReturn(moviesPage);
+
+        Page<MovieDTO> result = movieService.getAllActiveMovies(pageable, null, "Action");
+
+        assertThat(result.getContent()).isNotEmpty();
+    }
+
+    @Test
+    void searchMovies_ByTitle_ReturnsMatching() {
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<Movie> moviesPage = new PageImpl<>(List.of(testMovie), pageable, 1);
+
+        given(movieRepository.findByActiveTrueAndTitleContainingIgnoreCase("Knight", pageable))
+            .willReturn(moviesPage);
+
+        Page<MovieDTO> result = movieService.getAllActiveMovies(pageable, "Knight", null);
+
+        assertThat(result.getContent()).isNotEmpty();
+        assertThat(result.getTotalElements()).isEqualTo(1);
+    }
+
+    @Test
+    void getInactiveMovie_ReturnsNull() {
+        testMovie.setActive(false);
+        given(movieRepository.findByIdAndActiveTrue(1L)).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> movieService.getMovieById(1L))
+            .isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    void createMovie_WithValidData_PersistsSuccessfully() {
+        MovieDTO dto = MovieDTO.builder()
+            .title("New Movie")
+            .genre("Action")
+            .description("A new action movie")
+            .director("John Doe")
+            .durationMinutes(120)
+            .releaseYear(2025)
+            .ageRating("PG-13")
+            .build();
+        given(movieRepository.save(any(Movie.class))).willReturn(testMovie);
+
+        MovieDTO result = movieService.createMovie(dto);
+
+        assertThat(result).isNotNull();
+        then(movieRepository).should().save(any(Movie.class));
+    }
+
+    @Test
+    void updateMovie_PartialUpdate_PreservesExistingFields() {
+        testMovie.setTitle("Original Title");
+        given(movieRepository.findById(1L)).willReturn(Optional.of(testMovie));
+        given(movieRepository.save(any())).willReturn(testMovie);
+
+        MovieDTO updateDTO = MovieDTO.builder()
+            .title("Updated Title")
+            .genre("Drama")
+            .description("Updated description")
+            .director("Jane Doe")
+            .durationMinutes(150)
+            .releaseYear(2024)
+            .ageRating("R")
+            .build();
+
+        MovieDTO result = movieService.updateMovie(1L, updateDTO);
+
+        assertThat(result.getTitle()).isEqualTo("Updated Title");
+    }
+
+    @Test
+    void deactivateMovie_WithActiveMovie_BecomesInactive() {
+        testMovie.setActive(true);
+        given(movieRepository.findById(1L)).willReturn(Optional.of(testMovie));
+        given(movieRepository.save(any())).willReturn(testMovie);
+
+        movieService.deleteMovie(1L);
+
+        assertThat(testMovie.getActive()).isFalse();
     }
 }

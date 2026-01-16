@@ -110,6 +110,41 @@ class UserRestControllerTest {
     }
 
     @Nested
+    @DisplayName("GET /api/v1/users/username/{username}")
+    class GetUserByUsername {
+
+        @Test
+        @DisplayName("Should return user by username")
+        void getUserByUsername_ReturnsUser() throws Exception {
+            when(userService.getUserByUsername("john")).thenReturn(validUserDTO);
+
+            mockMvc.perform(get("/api/v1/users/username/john")
+                    .contentType(MediaType.APPLICATION_JSON))
+                    .andExpect(status().isOk());
+
+            verify(userService).getUserByUsername("john");
+        }
+    }
+
+    @Nested
+    @DisplayName("GET /api/v1/users/me")
+    class GetCurrentUser {
+
+        @Test
+        @DisplayName("Authenticated user can fetch profile")
+        @WithMockUser(username = "john")
+        void getCurrentUser_ReturnsProfile() throws Exception {
+            when(userService.getUserByUsername("john")).thenReturn(validUserDTO);
+
+            mockMvc.perform(get("/api/v1/users/me")
+                    .contentType(MediaType.APPLICATION_JSON))
+                    .andExpect(status().isOk());
+
+            verify(userService).getUserByUsername("john");
+        }
+    }
+
+    @Nested
     @DisplayName("POST /api/v1/users/register")
     class RegisterUser {
 
@@ -154,6 +189,74 @@ class UserRestControllerTest {
                     .andExpect(status().isBadRequest());
 
             verify(userService, never()).createUser(any(UserDTO.class));
+        }
+    }
+
+    @Nested
+    @DisplayName("GET /api/v1/users/role/{role}")
+    class GetUsersByRole {
+
+        @Test
+        @WithMockUser(roles = "ADMIN")
+        @DisplayName("Admin can fetch users by role")
+        void getUsersByRole_AsAdmin_ReturnsPage() throws Exception {
+            when(userService.getUsersByRole(eq("ADMIN"), any()))
+                .thenReturn(new org.springframework.data.domain.PageImpl<>(java.util.List.of(validUserDTO)));
+
+            mockMvc.perform(get("/api/v1/users/role/ADMIN")
+                    .contentType(MediaType.APPLICATION_JSON))
+                    .andExpect(status().isOk());
+
+            verify(userService).getUsersByRole(eq("ADMIN"), any());
+        }
+
+        @Test
+        @WithMockUser(roles = "USER")
+        @DisplayName("Non-admin cannot fetch users by role")
+        void getUsersByRole_AsUser_Forbidden() throws Exception {
+            mockMvc.perform(get("/api/v1/users/role/ADMIN")
+                    .contentType(MediaType.APPLICATION_JSON))
+                    .andExpect(status().isForbidden());
+
+            verify(userService, never()).getUsersByRole(anyString(), any());
+        }
+    }
+
+    @Nested
+    @DisplayName("PUT /api/v1/users/{id}/enable & disable")
+    class EnableDisableUser {
+
+        @Test
+        @WithMockUser(roles = "ADMIN")
+        @DisplayName("Admin can enable user")
+        void enableUser_AsAdmin_Success() throws Exception {
+            mockMvc.perform(put("/api/v1/users/5/enable")
+                    .contentType(MediaType.APPLICATION_JSON))
+                    .andExpect(status().isNoContent());
+
+            verify(userService).enableUser(5L);
+        }
+
+        @Test
+        @WithMockUser(roles = "ADMIN")
+        @DisplayName("Admin can disable user")
+        void disableUser_AsAdmin_Success() throws Exception {
+            mockMvc.perform(put("/api/v1/users/5/disable")
+                    .contentType(MediaType.APPLICATION_JSON))
+                    .andExpect(status().isNoContent());
+
+            verify(userService).disableUser(5L);
+        }
+
+        @Test
+        @WithMockUser(roles = "USER")
+        @DisplayName("User cannot change activation state")
+        void enableUser_AsRegularUser_Forbidden() throws Exception {
+            mockMvc.perform(put("/api/v1/users/5/enable")
+                    .contentType(MediaType.APPLICATION_JSON))
+                    .andExpect(status().isForbidden());
+
+            verify(userService, never()).enableUser(anyLong());
         }
     }
 

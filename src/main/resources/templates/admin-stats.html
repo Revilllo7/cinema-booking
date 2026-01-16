@@ -56,6 +56,11 @@
                         <i class="bi bi-calendar2-year"></i> Current Year
                     </button>
                 </div>
+                <div class="col-md-2">
+                    <button class="btn btn-outline-success w-100" onclick="downloadCsv()">
+                        <i class="bi bi-download"></i> Download CSV
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -340,6 +345,19 @@
         // Load current month data
         await loadCurrentMonth();
     });
+
+    function downloadCsv() {
+        const month = document.getElementById('monthSelect').value;
+        const year = document.getElementById('yearInput').value;
+
+        if (!month || !year) {
+            alert('Select both month and year before downloading the CSV.');
+            return;
+        }
+
+        const params = new URLSearchParams({ month, year });
+        window.location.href = `/api/v1/admin/stats/sales/csv?${params.toString()}`;
+    }
 </script>
 </body>
 </html>

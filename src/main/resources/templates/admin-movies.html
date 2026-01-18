@@ -98,15 +98,17 @@
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
+                    <div id="addMovieFeedback" class="alert alert-danger d-none" role="alert"></div>
                     <form id="addMovieForm">
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Title *</label>
-                                <input type="text" class="form-control" id="addTitle" required>
+                                <input type="text" class="form-control" id="addTitle" name="title" required>
+                                <div class="invalid-feedback" data-field-feedback="title"></div>
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Genre *</label>
-                                <select class="form-select" id="addGenre" required>
+                                <select class="form-select" id="addGenre" name="genre" required>
                                     <option value="">Select Genre</option>
                                     <option value="Action">Action</option>
                                     <option value="Comedy">Comedy</option>
@@ -117,16 +119,18 @@
                                     <option value="Thriller">Thriller</option>
                                     <option value="Animation">Animation</option>
                                 </select>
+                                <div class="invalid-feedback" data-field-feedback="genre"></div>
                             </div>
                         </div>
                         <div class="row">
                             <div class="col-md-4 mb-3">
                                 <label class="form-label">Duration (minutes) *</label>
-                                <input type="number" class="form-control" id="addDuration" required min="1">
+                                <input type="number" class="form-control" id="addDuration" name="durationMinutes" required min="1">
+                                <div class="invalid-feedback" data-field-feedback="durationMinutes"></div>
                             </div>
                             <div class="col-md-4 mb-3">
                                 <label class="form-label">Age Rating *</label>
-                                <select class="form-select" id="addAgeRating" required>
+                                <select class="form-select" id="addAgeRating" name="ageRating" required>
                                     <option value="">Select Rating</option>
                                     <option value="G">G</option>
                                     <option value="PG">PG</option>
@@ -134,28 +138,34 @@
                                     <option value="R">R</option>
                                     <option value="NC-17">NC-17</option>
                                 </select>
+                                <div class="invalid-feedback" data-field-feedback="ageRating"></div>
                             </div>
                             <div class="col-md-4 mb-3">
                                 <label class="form-label">Director *</label>
-                                <input type="text" class="form-control" id="addDirector" required>
+                                <input type="text" class="form-control" id="addDirector" name="director" required>
+                                <div class="invalid-feedback" data-field-feedback="director"></div>
                             </div>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Cast</label>
-                            <input type="text" class="form-control" id="addCast" placeholder="Comma-separated actor names">
+                            <input type="text" class="form-control" id="addCast" name="cast" placeholder="Comma-separated actor names">
+                            <div class="invalid-feedback" data-field-feedback="cast"></div>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Description *</label>
-                            <textarea class="form-control" id="addDescription" rows="3" required></textarea>
+                            <textarea class="form-control" id="addDescription" name="description" rows="3" required></textarea>
+                            <div class="invalid-feedback" data-field-feedback="description"></div>
                         </div>
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Poster URL</label>
-                                <input type="url" class="form-control" id="addPosterPath" placeholder="https://...">
+                                <input type="url" class="form-control" id="addPosterPath" name="posterPath" placeholder="https://...">
+                                <div class="invalid-feedback" data-field-feedback="posterPath"></div>
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Trailer URL</label>
-                                <input type="url" class="form-control" id="addTrailerUrl" placeholder="https://youtube.com/...">
+                                <input type="url" class="form-control" id="addTrailerUrl" name="trailerUrl" placeholder="https://youtube.com/...">
+                                <div class="invalid-feedback" data-field-feedback="trailerUrl"></div>
                             </div>
                         </div>
                     </form>
@@ -179,16 +189,18 @@
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
+                    <div id="editMovieFeedback" class="alert alert-danger d-none" role="alert"></div>
                     <form id="editMovieForm">
                         <input type="hidden" id="editId">
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Title *</label>
-                                <input type="text" class="form-control" id="editTitle" required>
+                                <input type="text" class="form-control" id="editTitle" name="title" required>
+                                <div class="invalid-feedback" data-field-feedback="title"></div>
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Genre *</label>
-                                <select class="form-select" id="editGenre" required>
+                                <select class="form-select" id="editGenre" name="genre" required>
                                     <option value="Action">Action</option>
                                     <option value="Comedy">Comedy</option>
                                     <option value="Drama">Drama</option>
@@ -198,44 +210,52 @@
                                     <option value="Thriller">Thriller</option>
                                     <option value="Animation">Animation</option>
                                 </select>
+                                <div class="invalid-feedback" data-field-feedback="genre"></div>
                             </div>
                         </div>
                         <div class="row">
                             <div class="col-md-4 mb-3">
                                 <label class="form-label">Duration (minutes) *</label>
-                                <input type="number" class="form-control" id="editDuration" required min="1">
+                                <input type="number" class="form-control" id="editDuration" name="durationMinutes" required min="1">
+                                <div class="invalid-feedback" data-field-feedback="durationMinutes"></div>
                             </div>
                             <div class="col-md-4 mb-3">
                                 <label class="form-label">Age Rating *</label>
-                                <select class="form-select" id="editAgeRating" required>
+                                <select class="form-select" id="editAgeRating" name="ageRating" required>
                                     <option value="G">G</option>
                                     <option value="PG">PG</option>
                                     <option value="PG-13">PG-13</option>
                                     <option value="R">R</option>
                                     <option value="NC-17">NC-17</option>
                                 </select>
+                                <div class="invalid-feedback" data-field-feedback="ageRating"></div>
                             </div>
                             <div class="col-md-4 mb-3">
                                 <label class="form-label">Director *</label>
-                                <input type="text" class="form-control" id="editDirector" required>
+                                <input type="text" class="form-control" id="editDirector" name="director" required>
+                                <div class="invalid-feedback" data-field-feedback="director"></div>
                             </div>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Cast</label>
-                            <input type="text" class="form-control" id="editCast">
+                            <input type="text" class="form-control" id="editCast" name="cast">
+                            <div class="invalid-feedback" data-field-feedback="cast"></div>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Description *</label>
-                            <textarea class="form-control" id="editDescription" rows="3" required></textarea>
+                            <textarea class="form-control" id="editDescription" name="description" rows="3" required></textarea>
+                            <div class="invalid-feedback" data-field-feedback="description"></div>
                         </div>
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Poster URL</label>
-                                <input type="url" class="form-control" id="editPosterPath">
+                                <input type="url" class="form-control" id="editPosterPath" name="posterPath">
+                                <div class="invalid-feedback" data-field-feedback="posterPath"></div>
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Trailer URL</label>
-                                <input type="url" class="form-control" id="editTrailerUrl">
+                                <input type="url" class="form-control" id="editTrailerUrl" name="trailerUrl">
+                                <div class="invalid-feedback" data-field-feedback="trailerUrl"></div>
                             </div>
                         </div>
                     </form>
@@ -322,6 +342,11 @@
         const pageSize = 10;
         let galleryMovieId = null;
         const POSTER_PLACEHOLDER = '/images/placeholder.jpg';
+        const feedback = window.AppFeedback || null;
+        const addMovieForm = document.getElementById('addMovieForm');
+        const editMovieForm = document.getElementById('editMovieForm');
+        const addMovieFeedback = document.getElementById('addMovieFeedback');
+        const editMovieFeedback = document.getElementById('editMovieFeedback');
 
         // Utility functions for modals
         function showBsModal(modalId) {
@@ -359,6 +384,7 @@
                     console.error('Error loading movies:', error);
                     document.getElementById('moviesTableBody').innerHTML = 
                         '<tr><td colspan="8" class="text-center text-danger py-4">Failed to load movies</td></tr>';
+                    feedback?.error?.('Load failed', 'Unable to load movies right now.');
                 });
         }
 
@@ -440,128 +466,123 @@
             nav.innerHTML = html;
         }
 
-        function addMovie() {
-            const movieData = {
-                title: document.getElementById('addTitle').value,
-                genre: document.getElementById('addGenre').value,
-                durationMinutes: parseInt(document.getElementById('addDuration').value),
-                ageRating: document.getElementById('addAgeRating').value,
-                director: document.getElementById('addDirector').value,
-                cast: document.getElementById('addCast').value || null,
-                description: document.getElementById('addDescription').value,
-                posterPath: document.getElementById('addPosterPath').value || null,
-                trailerUrl: document.getElementById('addTrailerUrl').value || null
-            };
-
-            fetch('/api/v1/movies', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(movieData)
-            })
-            .then(response => {
-                if (response.ok) {
-                    return response.json();
-                } else {
-                    return response.text().then(text => {
-                        throw new Error(text || `HTTP ${response.status}`);
-                    });
+        async function addMovie() {
+            if (!addMovieForm) {
+                return;
+            }
+            feedback?.clearFieldErrors?.(addMovieForm);
+            hideFormErrors(addMovieFeedback);
+            const movieData = buildMoviePayload(addMovieForm);
+            const clientErrors = validateMoviePayload(movieData);
+            if (Object.keys(clientErrors).length) {
+                feedback?.setFieldErrors?.(addMovieForm, clientErrors);
+                showFormErrors(addMovieFeedback, 'Please correct the highlighted fields.', clientErrors);
+                feedback?.warning?.('Missing fields', 'Fill in the required movie details before saving.');
+                return;
+            }
+            try {
+                const response = await fetch('/api/v1/movies', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(movieData)
+                });
+                if (!response.ok) {
+                    const error = await parseApiError(response, 'Unable to add movie.');
+                    handleFormError(addMovieForm, addMovieFeedback, error, 'Unable to add movie.');
+                    throw error;
                 }
-            })
-            .then(() => {
                 hideBsModal('addMovieModal');
-                document.getElementById('addMovieForm').reset();
+                addMovieForm.reset();
+                feedback?.success?.('Movie added', `${movieData.title || 'The movie'} was added successfully.`);
                 loadMovies(currentPage);
-                alert('Movie added successfully!');
-            })
-            .catch(error => {
+            } catch (error) {
                 console.error('Error:', error);
-                alert('Failed to add movie: ' + error.message);
-            });
-        }
-
-        function editMovie(id) {
-            fetch(`/api/v1/movies/${id}`)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                    }
-                    return response.json();
-                })
-                .then(movie => {
-                    document.getElementById('editId').value = movie.id;
-                    document.getElementById('editTitle').value = movie.title || '';
-                    document.getElementById('editGenre').value = movie.genre || '';
-                    document.getElementById('editDuration').value = movie.durationMinutes || '';
-                    document.getElementById('editAgeRating').value = movie.ageRating || '';
-                    document.getElementById('editDirector').value = movie.director || '';
-                    document.getElementById('editCast').value = movie.cast || '';
-                    document.getElementById('editDescription').value = movie.description || '';
-                    document.getElementById('editPosterPath').value = movie.posterPath || '';
-                    document.getElementById('editTrailerUrl').value = movie.trailerUrl || '';
-                    
-                    showBsModal('editMovieModal');
-                })
-                .catch(error => {
-                    console.error('Error loading movie:', error);
-                    alert('Failed to load movie details: ' + error.message);
-                });
-        }
-
-        function updateMovie() {
-            const id = document.getElementById('editId').value;
-            const movieData = {
-                title: document.getElementById('editTitle').value,
-                genre: document.getElementById('editGenre').value,
-                durationMinutes: parseInt(document.getElementById('editDuration').value),
-                ageRating: document.getElementById('editAgeRating').value,
-                director: document.getElementById('editDirector').value,
-                cast: document.getElementById('editCast').value || null,
-                description: document.getElementById('editDescription').value,
-                posterPath: document.getElementById('editPosterPath').value || null,
-                trailerUrl: document.getElementById('editTrailerUrl').value || null
-            };
-
-            fetch(`/api/v1/movies/${id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(movieData)
-            })
-            .then(response => {
-                if (response.ok) {
-                    return response.json();
-                } else {
-                    return response.text().then(text => {
-                        throw new Error(text || `HTTP ${response.status}`);
-                    });
+                if (!error?.errors) {
+                    showFormErrors(addMovieFeedback, error?.message || 'Unable to add movie right now.');
+                    feedback?.error?.('Add movie failed', error?.message || 'Unexpected error occurred.');
                 }
-            })
-            .then(() => {
-                hideBsModal('editMovieModal');
-                loadMovies(currentPage);
-                alert('Movie updated successfully!');
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Failed to update movie: ' + error.message);
-            });
+            }
         }
 
-        function deleteMovie(id, title) {
-            if (!confirm(`Are you sure you want to delete "${title}"?`)) return;
+        async function editMovie(id) {
+            feedback?.clearFieldErrors?.(editMovieForm);
+            hideFormErrors(editMovieFeedback);
+            try {
+                const response = await fetch(`/api/v1/movies/${id}`);
+                if (!response.ok) {
+                    const error = await parseApiError(response, 'Failed to load movie details.');
+                    throw error;
+                }
+                const movie = await response.json();
+                document.getElementById('editId').value = movie.id;
+                document.getElementById('editTitle').value = movie.title || '';
+                document.getElementById('editGenre').value = movie.genre || '';
+                document.getElementById('editDuration').value = movie.durationMinutes || '';
+                document.getElementById('editAgeRating').value = movie.ageRating || '';
+                document.getElementById('editDirector').value = movie.director || '';
+                document.getElementById('editCast').value = movie.cast || '';
+                document.getElementById('editDescription').value = movie.description || '';
+                document.getElementById('editPosterPath').value = movie.posterPath || '';
+                document.getElementById('editTrailerUrl').value = movie.trailerUrl || '';
+                showBsModal('editMovieModal');
+            } catch (error) {
+                console.error('Error loading movie:', error);
+                feedback?.error?.('Load movie failed', error?.message || 'Unable to load movie details.');
+            }
+        }
 
-            fetch(`/api/v1/movies/${id}`, { method: 'DELETE' })
-                .then(response => {
-                    if (response.ok) {
-                        loadMovies(currentPage);
-                        alert('Movie deleted successfully!');
-                    } else {
-                        throw new Error('Failed to delete movie');
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('Failed to delete movie. It may be associated with screenings.');
+        async function updateMovie() {
+            if (!editMovieForm) {
+                return;
+            }
+            const id = document.getElementById('editId').value;
+            feedback?.clearFieldErrors?.(editMovieForm);
+            hideFormErrors(editMovieFeedback);
+            const movieData = buildMoviePayload(editMovieForm);
+            const clientErrors = validateMoviePayload(movieData);
+            if (Object.keys(clientErrors).length) {
+                feedback?.setFieldErrors?.(editMovieForm, clientErrors);
+                showFormErrors(editMovieFeedback, 'Please correct the highlighted fields.', clientErrors);
+                feedback?.warning?.('Missing fields', 'Fill in the required movie details before saving.');
+                return;
+            }
+            try {
+                const response = await fetch(`/api/v1/movies/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(movieData)
                 });
+                if (!response.ok) {
+                    const error = await parseApiError(response, 'Unable to update movie.');
+                    handleFormError(editMovieForm, editMovieFeedback, error, 'Unable to update movie.');
+                    throw error;
+                }
+                hideBsModal('editMovieModal');
+                feedback?.success?.('Movie updated', `${movieData.title || 'The movie'} was updated successfully.`);
+                loadMovies(currentPage);
+            } catch (error) {
+                console.error('Error:', error);
+                if (!error?.errors) {
+                    showFormErrors(editMovieFeedback, error?.message || 'Unable to update movie right now.');
+                    feedback?.error?.('Update movie failed', error?.message || 'Unexpected error occurred.');
+                }
+            }
+        }
+
+        async function deleteMovie(id, title) {
+            if (!confirm(`Are you sure you want to delete "${title}"?`)) return;
+            try {
+                const response = await fetch(`/api/v1/movies/${id}`, { method: 'DELETE' });
+                if (!response.ok) {
+                    const error = await parseApiError(response, 'Failed to delete movie.');
+                    throw error;
+                }
+                feedback?.success?.('Movie deleted', `"${title}" has been removed.`);
+                loadMovies(currentPage);
+            } catch (error) {
+                console.error('Error:', error);
+                feedback?.error?.('Delete movie failed', error?.message || 'The movie might be associated with screenings.');
+            }
         }
 
         function openGalleryFromButton(button) {
@@ -774,6 +795,117 @@
                 console.error('Poster upload failed', error);
                 showPosterMessage(error.message || 'Poster upload failed.', 'danger');
             }
+        }
+
+        function buildMoviePayload(form) {
+            const formData = new FormData(form);
+            const durationRaw = formData.get('durationMinutes');
+            const parsedDuration = durationRaw === null || durationRaw === '' ? null : Number(durationRaw);
+            return {
+                title: getRequiredValue(formData, 'title'),
+                genre: getRequiredValue(formData, 'genre'),
+                durationMinutes: Number.isFinite(parsedDuration) ? parsedDuration : null,
+                ageRating: getRequiredValue(formData, 'ageRating'),
+                director: getRequiredValue(formData, 'director'),
+                cast: getOptionalValue(formData, 'cast'),
+                description: getRequiredValue(formData, 'description'),
+                posterPath: getOptionalValue(formData, 'posterPath'),
+                trailerUrl: getOptionalValue(formData, 'trailerUrl')
+            };
+        }
+
+        function validateMoviePayload(payload) {
+            const errors = {};
+            if (!payload.title) errors.title = 'Title is required';
+            if (!payload.genre) errors.genre = 'Genre is required';
+            if (!payload.durationMinutes || payload.durationMinutes <= 0) {
+                errors.durationMinutes = 'Duration must be greater than 0';
+            }
+            if (!payload.ageRating) errors.ageRating = 'Age rating is required';
+            if (!payload.director) errors.director = 'Director is required';
+            if (!payload.description) errors.description = 'Description is required';
+            return errors;
+        }
+
+        function getRequiredValue(formData, key) {
+            const value = formData.get(key);
+            return value === null ? '' : value.toString().trim();
+        }
+
+        function getOptionalValue(formData, key) {
+            const value = formData.get(key);
+            if (value === null) {
+                return null;
+            }
+            const trimmed = value.toString().trim();
+            return trimmed.length ? trimmed : null;
+        }
+
+        async function parseApiError(response, fallbackMessage) {
+            if (feedback?.parseErrorResponse) {
+                const detail = await feedback.parseErrorResponse(response);
+                if (feedback?.createError) {
+                    return feedback.createError(detail);
+                }
+                const err = new Error(detail.message || fallbackMessage);
+                err.errors = detail.errors;
+                return err;
+            }
+            const text = await response.text();
+            return new Error(text || fallbackMessage);
+        }
+
+        function handleFormError(form, container, error, fallbackMessage) {
+            if (!form || !container) {
+                return;
+            }
+            if (error?.errors && feedback?.setFieldErrors) {
+                feedback.setFieldErrors(form, error.errors);
+            }
+            showFormErrors(container, error?.message || fallbackMessage, error?.errors);
+        }
+
+        function showFormErrors(container, message, validation) {
+            if (!container) return;
+            container.replaceChildren();
+            const summary = document.createElement('div');
+            summary.textContent = message;
+            container.appendChild(summary);
+            const details = buildValidationList(validation);
+            if (details && details.length) {
+                const list = document.createElement('ul');
+                list.className = 'mb-0 mt-2 small';
+                details.forEach(item => {
+                    const li = document.createElement('li');
+                    li.textContent = item;
+                    list.appendChild(li);
+                });
+                container.appendChild(list);
+            }
+            container.classList.remove('d-none');
+        }
+
+        function hideFormErrors(container) {
+            if (!container) return;
+            container.classList.add('d-none');
+            container.replaceChildren();
+        }
+
+        function buildValidationList(errors) {
+            if (!errors) return null;
+            if (feedback?.validationList) {
+                return feedback.validationList(errors);
+            }
+            return Object.entries(errors).map(([field, msg]) => `${formatFieldLabel(field)}: ${msg}`);
+        }
+
+        function formatFieldLabel(field) {
+            if (!field) return 'Field';
+            return field
+                .replace(/([A-Z])/g, ' $1')
+                .replace(/[_-]+/g, ' ')
+                .replace(/^./, ch => ch.toUpperCase())
+                .trim();
         }
 
         // Search functionality

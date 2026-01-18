@@ -22,15 +22,18 @@
                             <div class="col-md-6 mb-3">
                                 <label class="form-label" for="customerEmail">Contact Email</label>
                                 <input class="form-control" id="customerEmail" name="customerEmail" type="email" placeholder="you@example.com" required>
+                                <div class="invalid-feedback" data-field-feedback="customerEmail"></div>
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label class="form-label" for="customerPhone">Phone (optional)</label>
                                 <input class="form-control" id="customerPhone" name="customerPhone" placeholder="+48123456789">
+                                <div class="invalid-feedback" data-field-feedback="customerPhone"></div>
                             </div>
                         </div>
                         <div class="mb-3">
                             <label class="form-label" for="cardholderName">Name on Card</label>
                             <input class="form-control" id="cardholderName" name="cardholderName" placeholder="John Doe" required>
+                            <div class="invalid-feedback" data-field-feedback="cardholderName"></div>
                         </div>
                         <div class="row">
                             <div class="col-md-8 mb-3">
@@ -83,6 +86,7 @@
     const qrImage = document.getElementById('qrImage');
     const qrDownload = document.getElementById('qrDownload');
     const payBtn = document.getElementById('payBtn');
+    const feedback = window.AppFeedback || null;
     let cartState = { items: [] };
 
     document.addEventListener('DOMContentLoaded', async () => {
@@ -134,12 +138,21 @@
             showAlert('Your cart is empty.');
             return;
         }
+        feedback?.clearFieldErrors?.(checkoutForm);
+        hideAlert();
         const payload = {
             customerEmail: checkoutForm.customerEmail.value,
             customerPhone: checkoutForm.customerPhone.value,
             cardholderName: checkoutForm.cardholderName.value,
             paymentMethod: 'CARD'
         };
+        const clientErrors = validatePayload(payload);
+        if (Object.keys(clientErrors).length) {
+            feedback?.setFieldErrors?.(checkoutForm, clientErrors);
+            showAlert('Please correct the highlighted fields before continuing.', clientErrors);
+            feedback?.warning?.('Fix required fields', 'Double-check the highlighted inputs.');
+            return;
+        }
         try {
             payBtn.disabled = true;
             payBtn.textContent = 'Processing...';
@@ -152,17 +165,46 @@
                 throw new Error('Please log in to finish checkout.');
             }
             if (!res.ok) {
-                throw new Error(await res.text() || 'Checkout failed');
+                const detail = await parseApiError(res, 'Checkout failed');
+                throw detail;
             }
             const data = await res.json();
             displayConfirmation(data);
+            feedback?.success?.('Checkout confirmed', `Booking ${data.bookingNumber} has been secured.`);
         } catch (error) {
             console.error('Checkout failed', error);
-            showAlert(error.message || 'Payment failed. Please try again.');
+            if (error.errors && feedback?.setFieldErrors) {
+                feedback.setFieldErrors(checkoutForm, error.errors);
+            }
+            showAlert(error.message || 'Payment failed. Please try again.', error.errors);
+            if (!error.errors) {
+                feedback?.error?.('Checkout failed', error.message || 'Something went wrong.');
+            }
         } finally {
             payBtn.disabled = false;
             payBtn.textContent = 'Pay & Confirm';
         }
+    }
+
+    function validatePayload(payload) {
+        const errors = {};
+        if (!payload.customerEmail || !payload.customerEmail.trim()) {
+            errors.customerEmail = 'Customer email is required';
+        } else if (!isValidEmail(payload.customerEmail)) {
+            errors.customerEmail = 'Customer email must be valid';
+        }
+        if (!payload.cardholderName || !payload.cardholderName.trim()) {
+            errors.cardholderName = 'Cardholder name is required';
+        }
+        if (!payload.paymentMethod) {
+            errors.paymentMethod = 'Payment method is required';
+        }
+        return errors;
+    }
+
+    function isValidEmail(value) {
+        const pattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return pattern.test(value.trim());
     }
 
     function displayConfirmation(data) {
@@ -197,14 +239,28 @@
         return (Number(value) || 0).toFixed(2);
     }
 
-    function showAlert(message) {
+    function showAlert(message, validationErrors = null) {
         if (!alertEl) return;
-        alertEl.textContent = message;
+        alertEl.replaceChildren();
+        const summary = document.createElement('div');
+        summary.textContent = message;
+        alertEl.appendChild(summary);
+        if (validationErrors && Object.keys(validationErrors).length) {
+            const list = document.createElement('ul');
+            list.className = 'mb-0 mt-2 small';
+            Object.entries(validationErrors).forEach(([field, msg]) => {
+                const item = document.createElement('li');
+                item.textContent = `${formatField(field)}: ${msg}`;
+                list.appendChild(item);
+            });
+            alertEl.appendChild(list);
+        }
         alertEl.classList.remove('d-none');
     }
 
     function hideAlert() {
         if (!alertEl) return;
+        alertEl.replaceChildren();
         alertEl.classList.add('d-none');
     }
 
@@ -215,6 +271,28 @@
     function enableCheckout() {
         payBtn.disabled = false;
         hideAlert();
+    }
+
+    async function parseApiError(response, fallbackMessage) {
+        if (feedback?.parseErrorResponse) {
+            const detail = await feedback.parseErrorResponse(response);
+            if (feedback?.createError) {
+                return feedback.createError(detail);
+            }
+            const err = new Error(detail.message || fallbackMessage);
+            err.errors = detail.errors;
+            return err;
+        }
+        const text = await response.text();
+        return new Error(text || fallbackMessage);
+    }
+
+    function formatField(field) {
+        if (!field) return 'Field';
+        return field
+            .replace(/([A-Z])/g, ' $1')
+            .replace(/[_-]+/g, ' ')
+            .replace(/^./, ch => ch.toUpperCase());
     }
 })();
 </script>

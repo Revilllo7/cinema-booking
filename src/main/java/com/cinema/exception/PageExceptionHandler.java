@@ -9,17 +9,27 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.servlet.ModelAndView;
 
-@ControllerAdvice
+import com.cinema.controller.AuthController;
+import com.cinema.controller.UserProfileController;
+import com.cinema.controller.web.HomeController;
+import com.cinema.controller.web.PageController;
+
+@ControllerAdvice(assignableTypes = {
+    HomeController.class,
+    PageController.class,
+    AuthController.class,
+    UserProfileController.class
+})
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class PageExceptionHandler {
 
     @ExceptionHandler(ResourceNotFoundException.class)
     public ModelAndView handleResourceNotFound(ResourceNotFoundException ex,
                                                HttpServletRequest request,
-                                               HttpServletResponse response) throws ResourceNotFoundException {
+                                               HttpServletResponse response) {
         String path = request.getRequestURI();
         if (isApiRequest(request)) {
-            throw ex;
+            return null;
         }
         response.setStatus(HttpStatus.NOT_FOUND.value());
         ModelAndView modelAndView = new ModelAndView("error/404");

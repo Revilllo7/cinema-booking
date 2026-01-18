@@ -127,6 +127,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script>
     let revenueChart;
+    const feedback = window.AppFeedback || null;
 
     async function loadStats() {
         try {
@@ -142,7 +143,7 @@
             renderData(data);
         } catch (e) {
             console.error('Error loading stats:', e);
-            alert('Failed to load statistics. Using demo data.');
+            showStatsToast('error', 'Failed to load statistics', 'Showing demo data instead.');
             // Fallback demo data
             const today = new Date();
             const fmt = d => d.toISOString().slice(0,10);
@@ -176,7 +177,7 @@
             renderData(data);
         } catch (e) {
             console.error('Error loading current month stats:', e);
-            alert('Failed to load current month statistics. Using demo data.');
+            showStatsToast('error', 'Failed to load current month', 'Showing demo data instead.');
             // Fallback demo data for current month
             const today = new Date();
             const fmt = d => d.toISOString().slice(0,10);
@@ -208,7 +209,7 @@
             renderData(data);
         } catch (e) {
             console.error('Error loading current year stats:', e);
-            alert('Failed to load current year statistics. Using demo data.');
+            showStatsToast('error', 'Failed to load current year', 'Showing demo data instead.');
             // Fallback demo data for the year
             const today = new Date();
             const fmt = d => d.toISOString().slice(0,10);
@@ -351,12 +352,19 @@
         const year = document.getElementById('yearInput').value;
 
         if (!month || !year) {
-            alert('Select both month and year before downloading the CSV.');
+            showStatsToast('warning', 'Missing filters', 'Select both month and year before downloading the CSV.');
             return;
         }
 
         const params = new URLSearchParams({ month, year });
         window.location.href = `/api/v1/admin/stats/sales/csv?${params.toString()}`;
+    }
+
+    function showStatsToast(type, title, message) {
+        const handler = feedback?.[type] || feedback?.info;
+        if (typeof handler === 'function') {
+            handler(title, message, { timeout: 5000 });
+        }
     }
 </script>
 </body>

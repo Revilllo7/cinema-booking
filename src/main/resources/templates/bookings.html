@@ -204,7 +204,22 @@
     <div th:replace="~{fragments/footer :: footer}"></div>
     
     <script>
-        function simulatePayment(button) {
+        const feedback = window.AppFeedback || null;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const pending = sessionStorage.getItem('bookingsToast');
+            if (pending) {
+                sessionStorage.removeItem('bookingsToast');
+                try {
+                    const payload = JSON.parse(pending);
+                    showToast(payload.type || 'info', payload.title, payload.message);
+                } catch (err) {
+                    console.warn('Unable to parse stored toast', err);
+                }
+            }
+        });
+
+        async function simulatePayment(button) {
             const bookingId = button.getAttribute('data-booking-id');
             const bookingNumber = button.getAttribute('data-booking-number');
             
@@ -212,67 +227,58 @@
                 return;
             }
             
-            button.disabled = true;
-            button.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Processing...';
-            
-            // Use the /confirm endpoint with proper parameters
-            fetch(`/api/v1/bookings/${bookingId}/confirm?paymentMethod=CREDIT_CARD&paymentReference=PAY-${Date.now()}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json'
+            setButtonBusy(button, 'Processing...');
+            try {
+                const response = await fetch(`/api/v1/bookings/${bookingId}/confirm?paymentMethod=CREDIT_CARD&paymentReference=PAY-${Date.now()}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                if (!response.ok) {
+                    const error = await parseApiError(response, 'Payment failed.');
+                    throw error;
                 }
-            })
-            .then(response => {
-                if (response.ok) {
-                    return response.json();
-                } else {
-                    throw new Error('Payment failed');
-                }
-            })
-            .then(data => {
-                alert('Payment successful! Your booking is now confirmed.');
-                // Redirect to bookings page
+                sessionStorage.setItem('bookingsToast', JSON.stringify({
+                    type: 'success',
+                    title: 'Payment processed',
+                    message: `Booking ${bookingNumber} has been confirmed.`
+                }));
                 window.location.href = '/profile/bookings';
-            })
-            .catch(error => {
+            } catch (error) {
                 console.error('Error:', error);
-                alert('Payment failed. Please try again.');
-                button.disabled = false;
-                button.innerHTML = '<i class="bi bi-credit-card"></i> Pay Now';
-            });
+                showToast('error', 'Payment failed', error?.message || 'Please try again.');
+                resetButton(button, '<i class="bi bi-credit-card"></i> Pay Now');
+            }
         }
         
-        function cancelBooking(button) {
+        async function cancelBooking(button) {
             const bookingId = button.getAttribute('data-booking-id');
             
             if (!confirm('Are you sure you want to cancel this booking? This action cannot be undone.')) {
                 return;
             }
             
-            button.disabled = true;
-            button.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Cancelling...';
-            
-            fetch(`/api/v1/bookings/${bookingId}/cancel?reason=User%20requested`, {
-                method: 'PUT'
-            })
-            .then(response => {
-                if (response.ok) {
-                    return response.json();
-                } else {
-                    throw new Error('Cancellation failed');
+            setButtonBusy(button, 'Cancelling...');
+            try {
+                const response = await fetch(`/api/v1/bookings/${bookingId}/cancel?reason=User%20requested`, {
+                    method: 'PUT'
+                });
+                if (!response.ok) {
+                    const error = await parseApiError(response, 'Cancellation failed.');
+                    throw error;
                 }
-            })
-            .then(data => {
-                alert('Booking cancelled successfully.');
-                // Redirect to bookings page
+                sessionStorage.setItem('bookingsToast', JSON.stringify({
+                    type: 'success',
+                    title: 'Booking cancelled',
+                    message: 'The booking was cancelled successfully.'
+                }));
                 window.location.href = '/profile/bookings';
-            })
-            .catch(error => {
+            } catch (error) {
                 console.error('Error:', error);
-                alert('Failed to cancel booking. Please try again.');
-                button.disabled = false;
-                button.innerHTML = '<i class="bi bi-trash"></i> Cancel';
-            });
+                showToast('error', 'Cancellation failed', error?.message || 'Please try again.');
+                resetButton(button, '<i class="bi bi-trash"></i> Cancel');
+            }
         }
         
         function showBooking(btn) {
@@ -291,6 +297,39 @@
             `;
             const modal = new bootstrap.Modal(document.getElementById('bookingModal'));
             modal.show();
+        }
+
+        function setButtonBusy(button, label) {
+            if (!button) return;
+            button.disabled = true;
+            button.innerHTML = `<span class="spinner-border spinner-border-sm"></span> ${label}`;
+        }
+
+        function resetButton(button, label) {
+            if (!button) return;
+            button.disabled = false;
+            button.innerHTML = label;
+        }
+
+        async function parseApiError(response, fallbackMessage) {
+            if (feedback?.parseErrorResponse) {
+                const detail = await feedback.parseErrorResponse(response);
+                if (feedback?.createError) {
+                    return feedback.createError(detail);
+                }
+                const err = new Error(detail.message || fallbackMessage);
+                err.errors = detail.errors;
+                return err;
+            }
+            const text = await response.text();
+            return new Error(text || fallbackMessage);
+        }
+
+        function showToast(type, title, message) {
+            const handler = feedback?.[type] || feedback?.info;
+            if (typeof handler === 'function') {
+                handler(title, message);
+            }
         }
     </script>
 

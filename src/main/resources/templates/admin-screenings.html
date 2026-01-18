@@ -100,29 +100,34 @@
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
+                    <div id="addScreeningFeedback" class="alert alert-danger d-none" role="alert"></div>
                     <form id="addScreeningForm">
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Movie *</label>
-                                <select class="form-select" id="addMovieId" required>
+                                <select class="form-select" id="addMovieId" name="movieId" required>
                                     <option value="">Select Movie</option>
                                 </select>
+                                <div class="invalid-feedback" data-field-feedback="movieId"></div>
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Hall *</label>
-                                <select class="form-select" id="addHallId" required>
+                                <select class="form-select" id="addHallId" name="hallId" required>
                                     <option value="">Select Hall</option>
                                 </select>
+                                <div class="invalid-feedback" data-field-feedback="hallId"></div>
                             </div>
                         </div>
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Start Date & Time *</label>
-                                <input type="datetime-local" class="form-control" id="addStartTime" required>
+                                <input type="datetime-local" class="form-control" id="addStartTime" name="startTime" required>
+                                <div class="invalid-feedback" data-field-feedback="startTime"></div>
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Base Price *</label>
-                                <input type="number" class="form-control" id="addBasePrice" required min="0.01" step="0.01">
+                                <input type="number" class="form-control" id="addBasePrice" name="basePrice" required min="0.01" step="0.01">
+                                <div class="invalid-feedback" data-field-feedback="basePrice"></div>
                             </div>
                         </div>
                         <div class="alert alert-info">
@@ -150,30 +155,35 @@
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
+                    <div id="editScreeningFeedback" class="alert alert-danger d-none" role="alert"></div>
                     <form id="editScreeningForm">
                         <input type="hidden" id="editId">
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Movie *</label>
-                                <select class="form-select" id="editMovieId" required>
+                                <select class="form-select" id="editMovieId" name="movieId" required>
                                     <option value="">Select Movie</option>
                                 </select>
+                                <div class="invalid-feedback" data-field-feedback="movieId"></div>
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Hall *</label>
-                                <select class="form-select" id="editHallId" required>
+                                <select class="form-select" id="editHallId" name="hallId" required>
                                     <option value="">Select Hall</option>
                                 </select>
+                                <div class="invalid-feedback" data-field-feedback="hallId"></div>
                             </div>
                         </div>
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Start Date & Time *</label>
-                                <input type="datetime-local" class="form-control" id="editStartTime" required>
+                                <input type="datetime-local" class="form-control" id="editStartTime" name="startTime" required>
+                                <div class="invalid-feedback" data-field-feedback="startTime"></div>
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Base Price *</label>
-                                <input type="number" class="form-control" id="editBasePrice" required min="0.01" step="0.01">
+                                <input type="number" class="form-control" id="editBasePrice" name="basePrice" required min="0.01" step="0.01">
+                                <div class="invalid-feedback" data-field-feedback="basePrice"></div>
                             </div>
                         </div>
                         <div class="alert alert-warning">
@@ -201,6 +211,11 @@
         const pageSize = 15;
         let movies = [];
         let halls = [];
+        const feedback = window.AppFeedback || null;
+        const addScreeningForm = document.getElementById('addScreeningForm');
+        const editScreeningForm = document.getElementById('editScreeningForm');
+        const addScreeningFeedback = document.getElementById('addScreeningFeedback');
+        const editScreeningFeedback = document.getElementById('editScreeningFeedback');
         // Utility functions for modals
         function showBsModal(modalId) {
             const modalEl = document.getElementById(modalId);
@@ -217,24 +232,40 @@
                 if (modal) modal.hide();
             }
         }
-        function loadDropdownData() {
-            // Load movies
-            fetch('/api/v1/movies?page=0&size=1000')
-                .then(response => response.json())
-                .then(data => {
-                    movies = data.content;
-                    populateMovieDropdowns();
-                })
-                .catch(error => console.error('Error loading movies:', error));
+        async function loadDropdownData() {
+            await Promise.all([loadMovieOptions(), loadHallOptions()]);
+        }
 
-            // Load halls
-            fetch('/api/v1/halls?page=0&size=100')
-                .then(response => response.json())
-                .then(data => {
-                    halls = data.content;
-                    populateHallDropdowns();
-                })
-                .catch(error => console.error('Error loading halls:', error));
+        async function loadMovieOptions() {
+            try {
+                const response = await fetch('/api/v1/movies?page=0&size=1000');
+                if (!response.ok) {
+                    const error = await parseApiError(response, 'Failed to load movies.');
+                    throw error;
+                }
+                const data = await response.json();
+                movies = data.content || [];
+                populateMovieDropdowns();
+            } catch (error) {
+                console.error('Error loading movies:', error);
+                showToast('error', 'Unable to load movies', error?.message || 'Movie list is unavailable right now.');
+            }
+        }
+
+        async function loadHallOptions() {
+            try {
+                const response = await fetch('/api/v1/halls?page=0&size=100');
+                if (!response.ok) {
+                    const error = await parseApiError(response, 'Failed to load halls.');
+                    throw error;
+                }
+                const data = await response.json();
+                halls = data.content || [];
+                populateHallDropdowns();
+            } catch (error) {
+                console.error('Error loading halls:', error);
+                showToast('error', 'Unable to load halls', error?.message || 'Hall list is unavailable right now.');
+            }
         }
 
         function populateMovieDropdowns() {
@@ -257,7 +288,7 @@
             editSelect.innerHTML += options;
         }
 
-        function loadScreenings(page = 0) {
+        async function loadScreenings(page = 0) {
             currentPage = page;
             const movieId = document.getElementById('movieFilter').value;
             const dateFrom = document.getElementById('dateFromFilter').value;
@@ -268,17 +299,21 @@
             if (dateFrom) url += `&startDate=${dateFrom}T00:00:00`;
             if (dateTo) url += `&endDate=${dateTo}T23:59:59`;
 
-            fetch(url)
-                .then(response => response.json())
-                .then(data => {
-                    renderScreeningsTable(data.content);
-                    renderPagination(data);
-                })
-                .catch(error => {
-                    console.error('Error loading screenings:', error);
-                    document.getElementById('screeningsTableBody').innerHTML = 
-                        '<tr><td colspan="9" class="text-center text-danger py-4">Failed to load screenings</td></tr>';
-                });
+            try {
+                const response = await fetch(url);
+                if (!response.ok) {
+                    const error = await parseApiError(response, 'Failed to load screenings.');
+                    throw error;
+                }
+                const data = await response.json();
+                renderScreeningsTable(data.content);
+                renderPagination(data);
+            } catch (error) {
+                console.error('Error loading screenings:', error);
+                document.getElementById('screeningsTableBody').innerHTML = 
+                    '<tr><td colspan="9" class="text-center text-danger py-4">Failed to load screenings</td></tr>';
+                showToast('error', 'Unable to load screenings', error?.message || 'Please adjust your filters and try again.');
+            }
         }
 
         function renderScreeningsTable(screenings) {
@@ -362,107 +397,223 @@
             nav.innerHTML = html;
         }
 
-        function addScreening() {
-            const screeningData = {
-                movieId: parseInt(document.getElementById('addMovieId').value),
-                hallId: parseInt(document.getElementById('addHallId').value),
-                startTime: document.getElementById('addStartTime').value,
-                basePrice: parseFloat(document.getElementById('addBasePrice').value)
+        function buildScreeningPayload(form) {
+            const formData = new FormData(form);
+            return {
+                movieId: toNumber(formData.get('movieId')),
+                hallId: toNumber(formData.get('hallId')),
+                startTime: formData.get('startTime'),
+                basePrice: toFloat(formData.get('basePrice'))
             };
-
-            fetch('/api/v1/screenings', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(screeningData)
-            })
-            .then(response => {
-                if (response.ok) {
-                    hideBsModal('addScreeningModal');
-                    document.getElementById('addScreeningForm').reset();
-                    loadScreenings(currentPage);
-                    alert('Screening scheduled successfully!');
-                } else {
-                    return response.json().then(data => {
-                        throw new Error(data.message || 'Failed to schedule screening');
-                    });
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Failed to schedule screening: ' + error.message);
-            });
         }
 
-        function editScreening(id) {
-            fetch(`/api/v1/screenings/${id}`)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                    }
-                    return response.json();
-                })
-                .then(screening => {
-                    document.getElementById('editId').value = screening.id;
-                    document.getElementById('editMovieId').value = screening.movieId;
-                    document.getElementById('editHallId').value = screening.hallId;
-                    document.getElementById('editStartTime').value = screening.startTime.substring(0, 16);
-                    document.getElementById('editBasePrice').value = screening.basePrice;
-                    
-                    showBsModal('editScreeningModal');
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('Failed to load screening details: ' + error.message);
+        function validateScreeningPayload(payload) {
+            const errors = {};
+            if (!payload.movieId) errors.movieId = 'Movie is required';
+            if (!payload.hallId) errors.hallId = 'Hall is required';
+            if (!payload.startTime) errors.startTime = 'Start time is required';
+            if (payload.basePrice === null || payload.basePrice <= 0) {
+                errors.basePrice = 'Base price must be greater than 0';
+            }
+            return errors;
+        }
+
+        function toNumber(value) {
+            const num = Number(value);
+            return Number.isFinite(num) ? num : null;
+        }
+
+        function toFloat(value) {
+            if (value === null || value === undefined || value === '') {
+                return null;
+            }
+            const num = parseFloat(value);
+            return Number.isFinite(num) ? num : null;
+        }
+
+        async function parseApiError(response, fallbackMessage) {
+            if (feedback?.parseErrorResponse) {
+                const detail = await feedback.parseErrorResponse(response);
+                if (feedback?.createError) {
+                    return feedback.createError(detail);
+                }
+                const err = new Error(detail.message || fallbackMessage);
+                err.errors = detail.errors;
+                return err;
+            }
+            const text = await response.text();
+            return new Error(text || fallbackMessage);
+        }
+
+        function handleFormError(form, container, error, fallbackMessage) {
+            if (!form || !container) return;
+            if (error?.errors && feedback?.setFieldErrors) {
+                feedback.setFieldErrors(form, error.errors);
+            }
+            showFormErrors(container, error?.message || fallbackMessage, error?.errors);
+        }
+
+        function showFormErrors(container, message, validation) {
+            if (!container) return;
+            container.replaceChildren();
+            const summary = document.createElement('div');
+            summary.textContent = message;
+            container.appendChild(summary);
+            const details = buildValidationList(validation);
+            if (details && details.length) {
+                const list = document.createElement('ul');
+                list.className = 'mb-0 mt-2 small';
+                details.forEach(item => {
+                    const li = document.createElement('li');
+                    li.textContent = item;
+                    list.appendChild(li);
                 });
+                container.appendChild(list);
+            }
+            container.classList.remove('d-none');
         }
 
-        function updateScreening() {
-            const id = document.getElementById('editId').value;
-            const screeningData = {
-                movieId: parseInt(document.getElementById('editMovieId').value),
-                hallId: parseInt(document.getElementById('editHallId').value),
-                startTime: document.getElementById('editStartTime').value,
-                basePrice: parseFloat(document.getElementById('editBasePrice').value)
-            };
+        function hideFormErrors(container) {
+            if (!container) return;
+            container.classList.add('d-none');
+            container.replaceChildren();
+        }
 
-            fetch(`/api/v1/screenings/${id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(screeningData)
-            })
-            .then(response => {
-                if (response.ok) {
-                    hideBsModal('editScreeningModal');
-                    loadScreenings(currentPage);
-                    alert('Screening updated successfully!');
-                } else {
-                    return response.json().then(data => {
-                        throw new Error(data.message || 'Failed to update screening');
-                    });
+        function buildValidationList(errors) {
+            if (!errors) return null;
+            if (feedback?.validationList) {
+                return feedback.validationList(errors);
+            }
+            return Object.entries(errors).map(([field, message]) => `${formatField(field)}: ${message}`);
+        }
+
+        function formatField(field) {
+            if (!field) return 'Field';
+            return field
+                .replace(/([A-Z])/g, ' $1')
+                .replace(/[_-]+/g, ' ')
+                .replace(/^./, ch => ch.toUpperCase())
+                .trim();
+        }
+
+        function showToast(type, title, message) {
+            const handler = feedback?.[type] || feedback?.info;
+            if (typeof handler === 'function') {
+                handler(title, message);
+            }
+        }
+
+        async function addScreening() {
+            if (!addScreeningForm) return;
+            feedback?.clearFieldErrors?.(addScreeningForm);
+            hideFormErrors(addScreeningFeedback);
+            const screeningData = buildScreeningPayload(addScreeningForm);
+            const clientErrors = validateScreeningPayload(screeningData);
+            if (Object.keys(clientErrors).length) {
+                feedback?.setFieldErrors?.(addScreeningForm, clientErrors);
+                showFormErrors(addScreeningFeedback, 'Please fix the highlighted fields.', clientErrors);
+                showToast('warning', 'Missing information', 'Fill in the required screening details before saving.');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/v1/screenings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(screeningData)
+                });
+                if (!response.ok) {
+                    const error = await parseApiError(response, 'Failed to schedule screening.');
+                    handleFormError(addScreeningForm, addScreeningFeedback, error, 'Failed to schedule screening.');
+                    throw error;
                 }
-            })
-            .catch(error => {
+                hideBsModal('addScreeningModal');
+                addScreeningForm.reset();
+                showToast('success', 'Screening scheduled', 'The screening was added successfully.');
+                loadScreenings(currentPage);
+            } catch (error) {
                 console.error('Error:', error);
-                alert('Failed to update screening: ' + error.message);
-            });
+                if (!error?.errors) {
+                    showFormErrors(addScreeningFeedback, error?.message || 'Failed to schedule screening.');
+                    showToast('error', 'Failed to schedule screening', error?.message || 'Please try again.');
+                }
+            }
         }
 
-        function deleteScreening(id) {
+        async function editScreening(id) {
+            feedback?.clearFieldErrors?.(editScreeningForm);
+            hideFormErrors(editScreeningFeedback);
+            try {
+                const response = await fetch(`/api/v1/screenings/${id}`);
+                if (!response.ok) {
+                    const error = await parseApiError(response, 'Failed to load screening details.');
+                    throw error;
+                }
+                const screening = await response.json();
+                document.getElementById('editId').value = screening.id;
+                document.getElementById('editMovieId').value = screening.movieId;
+                document.getElementById('editHallId').value = screening.hallId;
+                document.getElementById('editStartTime').value = (screening.startTime || '').substring(0, 16);
+                document.getElementById('editBasePrice').value = screening.basePrice;
+                showBsModal('editScreeningModal');
+            } catch (error) {
+                console.error('Error:', error);
+                showToast('error', 'Unable to load screening', error?.message || 'Please try again.');
+            }
+        }
+
+        async function updateScreening() {
+            if (!editScreeningForm) return;
+            const id = document.getElementById('editId').value;
+            feedback?.clearFieldErrors?.(editScreeningForm);
+            hideFormErrors(editScreeningFeedback);
+            const screeningData = buildScreeningPayload(editScreeningForm);
+            const clientErrors = validateScreeningPayload(screeningData);
+            if (Object.keys(clientErrors).length) {
+                feedback?.setFieldErrors?.(editScreeningForm, clientErrors);
+                showFormErrors(editScreeningFeedback, 'Please fix the highlighted fields.', clientErrors);
+                showToast('warning', 'Missing information', 'Fill in the required screening details before saving.');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/v1/screenings/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(screeningData)
+                });
+                if (!response.ok) {
+                    const error = await parseApiError(response, 'Failed to update screening.');
+                    handleFormError(editScreeningForm, editScreeningFeedback, error, 'Failed to update screening.');
+                    throw error;
+                }
+                hideBsModal('editScreeningModal');
+                showToast('success', 'Screening updated', 'The screening was updated successfully.');
+                loadScreenings(currentPage);
+            } catch (error) {
+                console.error('Error:', error);
+                if (!error?.errors) {
+                    showFormErrors(editScreeningFeedback, error?.message || 'Failed to update screening.');
+                    showToast('error', 'Failed to update screening', error?.message || 'Please try again.');
+                }
+            }
+        }
+
+        async function deleteScreening(id) {
             if (!confirm('Are you sure you want to delete this screening? This action cannot be undone.')) return;
 
-            fetch(`/api/v1/screenings/${id}`, { method: 'DELETE' })
-                .then(response => {
-                    if (response.ok) {
-                        loadScreenings(currentPage);
-                        alert('Screening deleted successfully!');
-                    } else {
-                        throw new Error('Failed to delete screening');
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('Failed to delete screening. It may have existing bookings.');
-                });
+            try {
+                const response = await fetch(`/api/v1/screenings/${id}`, { method: 'DELETE' });
+                if (!response.ok) {
+                    const error = await parseApiError(response, 'Failed to delete screening.');
+                    throw error;
+                }
+                showToast('success', 'Screening deleted', 'The screening has been removed.');
+                loadScreenings(currentPage);
+            } catch (error) {
+                console.error('Error:', error);
+                showToast('error', 'Failed to delete screening', error?.message || 'It may have existing bookings.');
+            }
         }
 
         // Initialize

@@ -47,7 +47,6 @@ public class BookingRestController {
             @Parameter(description = "Sort direction") @RequestParam(defaultValue = "DESC") Sort.Direction direction) {
         
         log.info("GET /api/v1/bookings - page: {}, size: {}, sortBy: {}", page, size, sortBy);
-        // Keep Pageable consistent with tests (no sort expectations there)
         Pageable pageable = PageRequest.of(page, size);
         Page<BookingDTO> bookings = bookingService.getAllBookings(pageable);
         

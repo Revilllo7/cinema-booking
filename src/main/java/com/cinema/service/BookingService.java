@@ -286,22 +286,4 @@ public class BookingService {
             .createdAt(booking.getCreatedAt())
             .build();
     }
-
-    private Booking convertToEntity(BookingDTO dto) {
-        // TODO: will resolve with REST
-        return Booking.builder()
-            .customerEmail(dto.getCustomerEmail())
-            .customerPhone(dto.getCustomerPhone())
-            .paymentMethod(dto.getPaymentMethod())
-            .status(Booking.BookingStatus.PENDING)
-            .build();
-    }
-
-    private void updateEntityFromDto(Booking booking, BookingDTO dto) {
-        // TODO: will resolve with REST
-        booking.setCustomerEmail(dto.getCustomerEmail());
-        booking.setCustomerPhone(dto.getCustomerPhone());
-        // Don't update status directly - use confirmBooking, cancelBooking methods
-        // Don't update seats after creation - delete and recreate
-    }
 }

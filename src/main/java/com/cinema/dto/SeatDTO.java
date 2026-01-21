@@ -26,5 +26,4 @@ public class SeatDTO {
     private Boolean available;
     
     private String status;
-    // for frontend: AVAILABLE, RESERVED, OCCUPIED
 }

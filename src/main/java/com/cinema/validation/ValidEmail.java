@@ -6,7 +6,7 @@ import java.lang.annotation.*;
 
 /**
  * Custom email validation annotation.
- * Validates that the email follows proper format using RFC 5322 compliant regex pattern.
+ * Validates that the email follows proper regex pattern.
  */
 @Target({ElementType.FIELD, ElementType.PARAMETER})
 @Retention(RetentionPolicy.RUNTIME)

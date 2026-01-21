@@ -24,6 +24,7 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -89,12 +90,16 @@ class AdminStatsRestControllerTest {
         mockMvc.perform(get("/api/v1/admin/stats/sales/current-month"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$[0].date").exists());
+
+        then(bookingJdbcRepository).should().getDailySalesForMonth(anyInt(), anyInt());
     }
 
     @Test
     void getDailySales_Unauthenticated_ReturnsForbidden() throws Exception {
         mockMvc.perform(get("/api/v1/admin/stats/sales"))
             .andExpect(status().isForbidden());
+
+        verifyNoInteractions(bookingJdbcRepository, statsCsvExportService);
     }
 
     @Test
@@ -112,6 +117,7 @@ class AdminStatsRestControllerTest {
             .andExpect(content().contentType("text/csv"))
             .andExpect(content().string("csv-body"));
 
+        then(bookingJdbcRepository).should().getDailySalesForMonth(2024, 5);
         then(statsCsvExportService).should().exportDailySales(sales);
     }
 }

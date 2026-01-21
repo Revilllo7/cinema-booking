@@ -33,6 +33,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -129,6 +130,7 @@ class SeatReservationServiceTest {
             .hasMessageContaining("Cannot release another user's seat lock");
 
         assertThat(lock.getStatus()).isEqualTo(SeatLockStatus.ACTIVE);
+        verify(seatLockRepository).findActiveLockForSession(anyLong(), anyLong(), anyString(), any(LocalDateTime.class));
         verify(seatStatusNotifier, never()).broadcast(anyLong(), any());
     }
 
@@ -161,6 +163,7 @@ class SeatReservationServiceTest {
 
         assertThat(sessionLock.getStatus()).isEqualTo(SeatLockStatus.RELEASED);
         assertThat(otherLock.getStatus()).isEqualTo(SeatLockStatus.ACTIVE);
+        verify(seatLockRepository, times(2)).findActiveLocksByScreening(anyLong(), any(LocalDateTime.class));
         verify(seatStatusNotifier).broadcast(anyLong(), anyList());
     }
 
@@ -171,6 +174,8 @@ class SeatReservationServiceTest {
         assertThatThrownBy(() -> seatReservationService.lockSeat(999L, 42L, "session-1", "jane"))
             .isInstanceOf(ResourceNotFoundException.class)
             .hasMessageContaining("Screening");
+
+        verify(screeningRepository).findById(999L);
     }
 
     @Test
@@ -181,6 +186,8 @@ class SeatReservationServiceTest {
         assertThatThrownBy(() -> seatReservationService.lockSeat(7L, 999L, "session-1", "jane"))
             .isInstanceOf(ResourceNotFoundException.class)
             .hasMessageContaining("Seat");
+
+        verify(seatRepository).findById(999L);
     }
 
     @Test
@@ -203,6 +210,8 @@ class SeatReservationServiceTest {
         assertThatThrownBy(() -> seatReservationService.lockSeat(7L, 42L, "session-1", "jane"))
             .isInstanceOf(IllegalStateException.class)
             .hasMessageContaining("already locked");
+
+        verify(seatLockRepository).findActiveLock(eq(7L), eq(42L), any(LocalDateTime.class));
     }
 
     @Test
@@ -213,6 +222,7 @@ class SeatReservationServiceTest {
         assertThatCode(() -> seatReservationService.releaseSeat(7L, 42L, "session-1", "jane"))
             .doesNotThrowAnyException();
 
+        verify(seatLockRepository).findActiveLockForSession(anyLong(), anyLong(), anyString(), any(LocalDateTime.class));
         verify(seatStatusNotifier, never()).broadcast(anyLong(), anyList());
     }
 
@@ -239,6 +249,7 @@ class SeatReservationServiceTest {
         seatReservationService.releaseSeat(7L, 42L, "session-1", "jane");
 
         assertThat(lock.getStatus()).isEqualTo(SeatLockStatus.RELEASED);
+        verify(seatLockRepository).findActiveLockForSession(eq(7L), eq(42L), eq("session-1"), any(LocalDateTime.class));
         verify(seatStatusNotifier).broadcast(anyLong(), anyList());
     }
 
@@ -248,6 +259,8 @@ class SeatReservationServiceTest {
 
         assertThatThrownBy(() -> seatReservationService.getSeatMap(999L, "session-1", "jane"))
             .isInstanceOf(ResourceNotFoundException.class);
+
+        verify(screeningRepository).findById(999L);
     }
 
     @Test
@@ -257,6 +270,7 @@ class SeatReservationServiceTest {
 
         seatReservationService.releaseAll(7L, "session-1");
 
+        verify(seatLockRepository).findActiveLocksByScreening(anyLong(), any(LocalDateTime.class));
         verify(seatStatusNotifier, never()).broadcast(anyLong(), anyList());
     }
 
@@ -288,6 +302,7 @@ class SeatReservationServiceTest {
 
         seatReservationService.releaseAll(7L, "session-1");
 
+        verify(seatLockRepository, times(2)).findActiveLocksByScreening(anyLong(), any(LocalDateTime.class));
         verify(seatStatusNotifier).broadcast(anyLong(), anyList());
     }
 }

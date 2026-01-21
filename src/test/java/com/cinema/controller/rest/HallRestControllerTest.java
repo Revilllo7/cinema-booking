@@ -21,6 +21,7 @@ import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -52,6 +53,8 @@ class HallRestControllerTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.content[0].name").value("Main Hall"))
             .andExpect(jsonPath("$.content[0].rowsCount").value(10));
+
+        verify(hallRepository).findAll(any(Pageable.class));
     }
 
     @Test
@@ -62,6 +65,8 @@ class HallRestControllerTest {
         mockMvc.perform(get("/api/v1/halls/1"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.capacity").value(100));
+
+        verify(hallRepository).findById(1L);
     }
 
     @Test
@@ -70,5 +75,7 @@ class HallRestControllerTest {
 
         mockMvc.perform(get("/api/v1/halls/99"))
             .andExpect(status().isNotFound());
+
+        verify(hallRepository).findById(99L);
     }
 }

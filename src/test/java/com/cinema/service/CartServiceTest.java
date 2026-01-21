@@ -27,7 +27,9 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
@@ -86,6 +88,11 @@ class CartServiceTest {
         assertThat(response.getItems()).hasSize(1);
         assertThat(response.getSubtotal()).isEqualTo(35.0);
         assertThat(sessionCart.getScreeningId()).isEqualTo(5L);
+
+        verify(screeningRepository).findByIdAndActiveTrue(5L);
+        verify(seatRepository).findById(11L);
+        verify(ticketTypeRepository).findByIdAndActiveTrue(3L);
+        verify(seatLockRepository).findActiveLockForSession(eq(5L), eq(11L), eq("sess"), any(LocalDateTime.class));
     }
 
     @Test
@@ -108,6 +115,11 @@ class CartServiceTest {
         assertThatThrownBy(() -> cartService.addSeat(5L, 11L, 3L, "sess", null))
             .isInstanceOf(IllegalStateException.class)
             .hasMessageContaining("Seat already present in cart");
+
+        verify(screeningRepository).findByIdAndActiveTrue(5L);
+        verify(seatRepository).findById(11L);
+        verify(ticketTypeRepository).findByIdAndActiveTrue(3L);
+        verify(seatLockRepository).findActiveLockForSession(eq(5L), eq(11L), eq("sess"), any(LocalDateTime.class));
     }
 
     @Test
@@ -144,6 +156,9 @@ class CartServiceTest {
         assertThat(response.getItems()).isEmpty();
         assertThat(sessionCart.getItems()).isEmpty();
         assertThat(sessionCart.getScreeningId()).isNull();
+
+        verify(seatLockRepository).findActiveLocksForSession(eq(5L), eq("sess"), any(LocalDateTime.class));
+        verify(seatLockRepository, never()).findActiveLocksForUsername(eq(5L), anyString(), any(LocalDateTime.class));
     }
 
     @Test
@@ -173,6 +188,8 @@ class CartServiceTest {
             .extracting(TicketOptionResponse::getTicketTypeId)
             .containsExactly(3L, 7L);
         assertThat(responses.get(1).getName()).isEqualTo(TicketTypeName.SENIOR);
+
+        verify(ticketTypeRepository).findByActiveTrueOrderByPriceModifier();
     }
 
     @Test
@@ -192,6 +209,11 @@ class CartServiceTest {
             ticketType.getId(), "session-1", "testuser");
 
         assertThat(response).isNotNull();
+
+        verify(screeningRepository).findByIdAndActiveTrue(screening.getId());
+        verify(seatRepository).findById(seat.getId());
+        verify(ticketTypeRepository).findByIdAndActiveTrue(ticketType.getId());
+        verify(seatLockRepository).findActiveLockForSession(eq(screening.getId()), eq(seat.getId()), eq("session-1"), any(LocalDateTime.class));
     }
 
     @Test
@@ -257,5 +279,8 @@ class CartServiceTest {
         CartResponse response = cartService.getCart(screening.getId(), "session-1", "testuser");
 
         assertThat(response.getItems()).hasSize(1);
+
+        verify(seatLockRepository).findActiveLocksForSession(eq(screening.getId()), eq("session-1"), any(LocalDateTime.class));
+        verify(seatLockRepository).findActiveLocksForUsername(eq(screening.getId()), eq("testuser"), any(LocalDateTime.class));
     }
 }

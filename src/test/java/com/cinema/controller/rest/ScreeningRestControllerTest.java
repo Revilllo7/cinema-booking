@@ -166,6 +166,8 @@ class ScreeningRestControllerTest {
             mockMvc.perform(get("/api/v1/screenings/movie/1")
                     .contentType(MediaType.APPLICATION_JSON))
                     .andExpect(status().isOk());
+
+                        verify(screeningService).getScreeningsByMovie(1L);
         }
     }
 
@@ -213,6 +215,8 @@ class ScreeningRestControllerTest {
             mockMvc.perform(get("/api/v1/screenings/hall/1")
                     .contentType(MediaType.APPLICATION_JSON))
                     .andExpect(status().isOk());
+
+                        verify(screeningService).getScreeningsByHall(1L);
         }
     }
 
@@ -474,6 +478,8 @@ class ScreeningRestControllerTest {
                     .contentType(MediaType.APPLICATION_JSON))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$", hasSize(0)));
+
+            verify(screeningService).getScreeningsByHallAndDateRange(1L, startDate, endDate);
         }
 
         @Test
@@ -491,6 +497,8 @@ class ScreeningRestControllerTest {
                     .param("endDate", endDate.toString())
                     .contentType(MediaType.APPLICATION_JSON))
                     .andExpect(status().isOk());
+
+            verify(screeningService).getScreeningsByHallAndDateRange(1L, startDate, endDate);
         }
     }
 }

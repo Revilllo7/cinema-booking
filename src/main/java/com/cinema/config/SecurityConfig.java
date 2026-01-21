@@ -39,12 +39,12 @@ public class SecurityConfig {
                 // Public API Endpoints (GET only)
                 .requestMatchers(HttpMethod.GET, "/api/v1/movies/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/screenings/**").permitAll()
+                // Swagger/OpenAPI restricted to admins (must be above catch-all GET rule)
+                .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**", "/api-docs/**").hasRole("ADMIN")
                 // Allow other GET requests for public access (will 404 if not found, not 401)
                 .requestMatchers(HttpMethod.GET, "/**").permitAll()
                 // Public registration
                 .requestMatchers(HttpMethod.POST, "/api/v1/users/register").permitAll()
-                // Swagger/OpenAPI
-                .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/api-docs/**").permitAll()
                 // H2 Console
                 .requestMatchers("/h2-console/**").permitAll()
                 // Profile endpoints require authentication

@@ -1,7 +1,7 @@
 package com.cinema.controller.rest;
 
 import com.cinema.dto.DailySalesDTO;
-import com.cinema.repository.jdbc.BookingJdbcRepository;
+import com.cinema.service.AdminStatsService;
 import com.cinema.service.StatsCsvExportService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -25,7 +25,7 @@ import java.util.List;
 @SecurityRequirement(name = "bearerAuth")
 public class AdminStatsRestController {
 
-    private final BookingJdbcRepository bookingJdbcRepository;
+    private final AdminStatsService adminStatsService;
     private final StatsCsvExportService statsCsvExportService;
 
     @GetMapping("/sales")
@@ -44,12 +44,7 @@ public class AdminStatsRestController {
     @Operation(summary = "Get current month sales", 
                description = "Returns daily sales data for the current month")
     public ResponseEntity<List<DailySalesDTO>> getCurrentMonthSales() {
-        YearMonth currentMonth = YearMonth.now();
-        List<DailySalesDTO> sales = bookingJdbcRepository.getDailySalesForMonth(
-            currentMonth.getYear(), 
-            currentMonth.getMonthValue()
-        );
-        return ResponseEntity.ok(sales);
+        return ResponseEntity.ok(adminStatsService.getCurrentMonthSales());
     }
 
     @GetMapping(value = "/sales/csv", produces = "text/csv")
@@ -73,11 +68,11 @@ public class AdminStatsRestController {
 
     private List<DailySalesDTO> loadSalesData(Integer year, Integer month, LocalDate startDate, LocalDate endDate) {
         if (startDate != null && endDate != null) {
-            return bookingJdbcRepository.getDailySalesForDateRange(startDate, endDate);
+            return adminStatsService.getDailySalesForDateRange(startDate, endDate);
         }
 
         YearMonth targetMonth = resolveTargetMonth(year, month);
-        return bookingJdbcRepository.getDailySalesForMonth(targetMonth.getYear(), targetMonth.getMonthValue());
+        return adminStatsService.getDailySalesForMonth(targetMonth.getYear(), targetMonth.getMonthValue());
     }
 
     private YearMonth resolveTargetMonth(Integer year, Integer month) {

@@ -2,7 +2,7 @@ package com.cinema.controller.rest;
 
 import com.cinema.config.SecurityConfig;
 import com.cinema.dto.DailySalesDTO;
-import com.cinema.repository.jdbc.BookingJdbcRepository;
+import com.cinema.service.AdminStatsService;
 import com.cinema.service.StatsCsvExportService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,7 +20,6 @@ import java.time.LocalDate;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
@@ -40,7 +39,7 @@ class AdminStatsRestControllerTest {
     private MockMvc mockMvc;
 
     @MockBean
-    private BookingJdbcRepository bookingJdbcRepository;
+    private AdminStatsService adminStatsService;
 
     @MockBean
     private JpaMetamodelMappingContext jpaMetamodelMappingContext;
@@ -53,9 +52,9 @@ class AdminStatsRestControllerTest {
 
     @Test
     @WithMockUser(roles = "ADMIN")
-    void getDailySales_ForSpecificMonth_UsesJdbcRepository() throws Exception {
+    void getDailySales_ForSpecificMonth_DelegatesToService() throws Exception {
         List<DailySalesDTO> sales = List.of(new DailySalesDTO(LocalDate.now(), 100.0, 20L));
-        given(bookingJdbcRepository.getDailySalesForMonth(2024, 5)).willReturn(sales);
+        given(adminStatsService.getDailySalesForMonth(2024, 5)).willReturn(sales);
 
         mockMvc.perform(get("/api/v1/admin/stats/sales")
                 .param("year", "2024")
@@ -63,14 +62,14 @@ class AdminStatsRestControllerTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$[0].totalRevenue").value(100.0));
 
-        then(bookingJdbcRepository).should().getDailySalesForMonth(2024, 5);
+        then(adminStatsService).should().getDailySalesForMonth(2024, 5);
     }
 
     @Test
     @WithMockUser(roles = "ADMIN")
     void getDailySales_ForDateRange_DelegatesToRangeQuery() throws Exception {
         List<DailySalesDTO> sales = List.of(new DailySalesDTO(LocalDate.now(), 100.0, 20L));
-        given(bookingJdbcRepository.getDailySalesForDateRange(any(LocalDate.class), any(LocalDate.class))).willReturn(sales);
+        given(adminStatsService.getDailySalesForDateRange(any(LocalDate.class), any(LocalDate.class))).willReturn(sales);
 
         mockMvc.perform(get("/api/v1/admin/stats/sales")
                 .param("startDate", "2024-05-01")
@@ -78,20 +77,20 @@ class AdminStatsRestControllerTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$[0].ticketsSold").value(20));
 
-        then(bookingJdbcRepository).should().getDailySalesForDateRange(eq(LocalDate.parse("2024-05-01")), eq(LocalDate.parse("2024-05-31")));
+        then(adminStatsService).should().getDailySalesForDateRange(eq(LocalDate.parse("2024-05-01")), eq(LocalDate.parse("2024-05-31")));
     }
 
     @Test
     @WithMockUser(roles = "ADMIN")
     void getCurrentMonthSales_ReturnsData() throws Exception {
         List<DailySalesDTO> sales = List.of(new DailySalesDTO(LocalDate.now(), 100.0, 20L));
-        given(bookingJdbcRepository.getDailySalesForMonth(anyInt(), anyInt())).willReturn(sales);
+        given(adminStatsService.getCurrentMonthSales()).willReturn(sales);
 
         mockMvc.perform(get("/api/v1/admin/stats/sales/current-month"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$[0].date").exists());
 
-        then(bookingJdbcRepository).should().getDailySalesForMonth(anyInt(), anyInt());
+        then(adminStatsService).should().getCurrentMonthSales();
     }
 
     @Test
@@ -99,14 +98,14 @@ class AdminStatsRestControllerTest {
         mockMvc.perform(get("/api/v1/admin/stats/sales"))
             .andExpect(status().isForbidden());
 
-        verifyNoInteractions(bookingJdbcRepository, statsCsvExportService);
+        verifyNoInteractions(adminStatsService, statsCsvExportService);
     }
 
     @Test
     @WithMockUser(roles = "ADMIN")
     void downloadDailySalesCsv_ReturnsAttachment() throws Exception {
         List<DailySalesDTO> sales = List.of(new DailySalesDTO(LocalDate.of(2024, 5, 1), 120.0, 12L));
-        given(bookingJdbcRepository.getDailySalesForMonth(2024, 5)).willReturn(sales);
+        given(adminStatsService.getDailySalesForMonth(2024, 5)).willReturn(sales);
         given(statsCsvExportService.exportDailySales(sales)).willReturn("csv-body".getBytes());
 
         mockMvc.perform(get("/api/v1/admin/stats/sales/csv")
@@ -117,7 +116,7 @@ class AdminStatsRestControllerTest {
             .andExpect(content().contentType("text/csv"))
             .andExpect(content().string("csv-body"));
 
-        then(bookingJdbcRepository).should().getDailySalesForMonth(2024, 5);
+        then(adminStatsService).should().getDailySalesForMonth(2024, 5);
         then(statsCsvExportService).should().exportDailySales(sales);
     }
 }
